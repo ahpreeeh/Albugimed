@@ -347,7 +347,7 @@ export function PlanningView() {
             </div>
 
             {/* ── Tabs ────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="app-segmented">
                     <button
                         className="app-segmented-button"
@@ -355,7 +355,8 @@ export function PlanningView() {
                         onClick={() => setViewMode("week")}
                     >
                         <Calendar className="h-3.5 w-3.5" />
-                        Vue hebdomadaire
+                        <span className="hidden xs:inline">Vue hebdomadaire</span>
+                        <span className="xs:hidden">Semaine</span>
                     </button>
                     <button
                         className="app-segmented-button"
@@ -363,7 +364,8 @@ export function PlanningView() {
                         onClick={() => setViewMode("calendar")}
                     >
                         <CalendarDays className="h-3.5 w-3.5" />
-                        Vue mensuelle
+                        <span className="hidden xs:inline">Vue mensuelle</span>
+                        <span className="xs:hidden">Mois</span>
                     </button>
                     <button
                         className="app-segmented-button"
@@ -371,7 +373,8 @@ export function PlanningView() {
                         onClick={() => setViewMode("recurrent")}
                     >
                         <Repeat className="h-3.5 w-3.5" />
-                        Créneaux récurrents
+                        <span className="hidden xs:inline">Créneaux récurrents</span>
+                        <span className="xs:hidden">Récurrents</span>
                         {recurrentSlots.filter(s => s.isActive).length > 0 && (
                             <span className="app-badge-accent ml-1">
                                 {recurrentSlots.filter(s => s.isActive).length}
@@ -381,7 +384,7 @@ export function PlanningView() {
                 </div>
 
                 {viewMode === "week" && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                         <button className="app-btn app-btn-ghost p-2" onClick={goToPrevWeek}>
                             <ChevronLeft className="h-4 w-4" />
                         </button>
@@ -393,7 +396,7 @@ export function PlanningView() {
                                 Aujourd&apos;hui
                             </button>
                         )}
-                        <span className="text-sm font-medium text-[var(--color-text-secondary)]">
+                        <span className="text-xs sm:text-sm font-medium text-[var(--color-text-secondary)]">
                             Semaine du {formatWeekRange(currentWeekStart)}
                         </span>
                         <button className="app-btn app-btn-ghost p-2" onClick={goToNextWeek}>
@@ -410,7 +413,7 @@ export function PlanningView() {
                             })}>
                             <ChevronLeft className="h-4 w-4" />
                         </button>
-                        <span className="min-w-[140px] text-center text-sm font-semibold text-[var(--color-text-primary)]">
+                        <span className="min-w-[120px] sm:min-w-[140px] text-center text-sm font-semibold text-[var(--color-text-primary)]">
                             {monthLabel}
                         </span>
                         <button className="app-btn app-btn-ghost p-2"
@@ -427,7 +430,7 @@ export function PlanningView() {
             {/* ── CALENDAR (MONTHLY) VIEW ──────────────────────────────────────── */}
             {viewMode === "calendar" && (
                 <div className="flex flex-col" style={{ paddingBottom: "80px" }}>
-                    <div className="flex gap-5">
+                    <div className="flex flex-col lg:flex-row gap-5">
                         {/* ── Monthly Grid ── */}
                         <div className="flex-1 app-card overflow-hidden">
                             {/* Day headers */}
@@ -447,7 +450,7 @@ export function PlanningView() {
                                             return (
                                                 <div
                                                     key={cell.dateStr}
-                                                    className={`min-h-[90px] p-2 transition-colors ${
+                                                    className={`min-h-[60px] sm:min-h-[90px] p-1 sm:p-2 transition-colors ${
                                                         !cell.isCurrentMonth ? "opacity-30" : ""
                                                     } ${
                                                         cell.isToday ? "bg-[var(--color-accent-muted)]" : "hover:bg-[var(--color-bg-active-nav)]"
@@ -487,7 +490,7 @@ export function PlanningView() {
                         </div>
 
                         {/* ── Right Panel: Month summary ── */}
-                        <div className="w-72 shrink-0 space-y-3">
+                        <div className="w-full lg:w-72 lg:shrink-0 space-y-3">
                             <div className="app-card p-4">
                                 <h3 className="text-[12px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
                                     {monthLabel} — {eventsForMonth.length} événement{eventsForMonth.length !== 1 ? "s" : ""}

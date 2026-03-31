@@ -60,14 +60,14 @@ const TopNav = () => {
                                         key={item.id}
                                         onClick={() => setActiveView(item.id)}
                                         className={cn(
-                                            "flex items-center gap-1.5 rounded-md px-3.5 py-2 text-[13px] font-medium transition-all duration-150",
+                                            "flex items-center gap-1.5 rounded-md px-2.5 sm:px-3.5 py-2 text-[13px] font-medium transition-all duration-150",
                                             isActive
                                                 ? "bg-[var(--color-accent-muted)] text-[var(--color-accent)]"
                                                 : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-active-nav)] hover:text-[var(--color-text-primary)]"
                                         )}
                                     >
                                         <item.icon className="h-3.5 w-3.5" />
-                                        {item.label}
+                                        <span className="hidden sm:inline">{item.label}</span>
                                     </button>
                                 );
                             })}
@@ -78,12 +78,12 @@ const TopNav = () => {
                             <button
                                 onClick={() => setStrategieOpen(true)}
                                 className={cn(
-                                    "flex items-center gap-1.5 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-150",
+                                    "flex items-center gap-1.5 rounded-md px-2.5 sm:px-3 py-2 text-[13px] font-medium transition-all duration-150",
                                     "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-active-nav)] hover:text-[var(--color-text-primary)]"
                                 )}
                             >
                                 <Settings2 className="h-3.5 w-3.5" />
-                                Stratégie
+                                <span className="hidden sm:inline">Stratégie</span>
                             </button>
                             <button
                                 onClick={() => setIsThemePanelOpen(true)}

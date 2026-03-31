@@ -17,6 +17,8 @@ import type { ErrorEntry } from "@/types";
 import type { ActiveStrategy } from "@/types/strategy";
 import { SessionWidget } from "@/components/features/session/SessionWidget";
 
+import { WeeklyTracker } from "@/components/features/tracking/WeeklyTracker";
+
 // ——— EDN Countdown ———
 const EDN_DATE_KEY = 'med-pilot-edn-date';
 
@@ -562,9 +564,10 @@ export const HomeView = () => {
 
             {/* Main grid */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
-                {/* Left: Session Widget — self-start prevents stretching to match right column height */}
-                <div className="self-start">
+                {/* Left: Session Widget & Tracking — self-start prevents stretching to match right column height */}
+                <div className="self-start space-y-5">
                     <SessionWidget />
+                    <WeeklyTracker />
                 </div>
 
                 {/* Right: widgets */}

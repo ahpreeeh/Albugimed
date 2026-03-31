@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
     Play, Square, ArrowRight, SkipForward, Settings2,
-    Clock, Zap, Target, CheckCircle2, Trophy,
+    Clock, Zap, Target, CheckCircle2, Trophy, Pause,
 } from 'lucide-react';
 import { useStrategy } from '@/context/StrategyContext';
 import { useSessionEngine } from '@/context/SessionEngineContext';
@@ -13,16 +13,31 @@ import type { DifficultyRating } from '@/types/session';
 import { reasonLabel, taskTypeLabel, reasonBadgeClass, difficultyColor } from '@/types/session';
 import { cn } from '@/lib/utils';
 
-// ─── Timer hook ──────────────────────────────────────────────────────
-function useTimer(isRunning: boolean): number {
+// ─── Timer hook (with pause support) ─────────────────────────────────
+function useTimer(isRunning: boolean, isPaused: boolean): number {
     const [elapsed, setElapsed] = useState(0);
+    const bankedMsRef = useRef(0);
+    const segmentStartRef = useRef(0);
 
     useEffect(() => {
-        if (!isRunning) { setElapsed(0); return; }
-        const start = Date.now();
-        const interval = setInterval(() => setElapsed(Date.now() - start), 1000);
-        return () => clearInterval(interval);
+        if (!isRunning) {
+            setElapsed(0);
+            bankedMsRef.current = 0;
+            segmentStartRef.current = 0;
+        }
     }, [isRunning]);
+
+    useEffect(() => {
+        if (!isRunning || isPaused) return;
+        segmentStartRef.current = Date.now();
+        const interval = setInterval(() => {
+            setElapsed(bankedMsRef.current + (Date.now() - segmentStartRef.current));
+        }, 1000);
+        return () => {
+            bankedMsRef.current += Date.now() - segmentStartRef.current;
+            clearInterval(interval);
+        };
+    }, [isRunning, isPaused]);
 
     return elapsed;
 }
@@ -103,9 +118,44 @@ export const SessionWidget = () => {
 
     const [strategieOpen, setStrategieOpen] = useState(false);
     const [showRating, setShowRating] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
+    const startedAtRef = useRef<string | null>(null);
+    const pendingDurationRef = useRef(0);
 
     const isRunning = currentTask?.status === 'in-progress';
-    const liveTimer = useTimer(isRunning);
+    const liveTimer = useTimer(isRunning, isPaused);
+
+    // Reset pause when task changes
+    useEffect(() => { setIsPaused(false); }, [currentTask?.id]);
+
+    const TIMING_KEY = 'med-pilot-session-timing';
+
+    const handleStart = useCallback(() => {
+        startedAtRef.current = new Date().toISOString();
+        startCurrentTask();
+    }, [startCurrentTask]);
+
+    const handleStop = useCallback(() => {
+        pendingDurationRef.current = liveTimer;
+        setShowRating(true);
+    }, [liveTimer]);
+
+    const saveTimingEntry = useCallback((durationMs: number) => {
+        if (!currentTask || !startedAtRef.current) return;
+        try {
+            const existing = JSON.parse(localStorage.getItem(TIMING_KEY) || '[]');
+            existing.push({
+                taskId: currentTask.id,
+                chapterTitle: currentTask.chapterTitle,
+                subjectTitle: currentTask.subjectTitle,
+                startedAt: startedAtRef.current,
+                durationMs,
+                date: new Date().toISOString().slice(0, 10),
+            });
+            localStorage.setItem(TIMING_KEY, JSON.stringify(existing));
+        } catch { /* ignore */ }
+        startedAtRef.current = null;
+    }, [currentTask]);
 
     // Progress bar
     const progress = useMemo(() => {
@@ -221,64 +271,81 @@ export const SessionWidget = () => {
 
                 {/* Current task */}
                 {currentTask && !allDone && (
-                    <div className="space-y-3">
-                        {/* Task info */}
-                        <div className="space-y-1.5">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-[13px] font-semibold text-[var(--color-text-primary)] truncate flex-1">
-                                    {currentTask.chapterTitle}
-                                </h3>
-                                <span className={cn("text-[9px]", reasonBadgeClass(currentTask.reason))}>
-                                    {reasonLabel(currentTask.reason)}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-3 text-[10px] text-[var(--color-text-muted)]">
-                                <span>{currentTask.subjectTitle}</span>
-                                <span className="text-[var(--color-text-hint)]">•</span>
-                                <span className="font-medium">
-                                    {taskTypeLabel(currentTask.taskType, currentTask.annaleLevel)}
-                                </span>
-                                {isRunning && (
-                                    <span className="flex items-center gap-1 text-[var(--color-accent)] font-mono">
-                                        <Clock className="h-2.5 w-2.5 animate-pulse" />
-                                        {formatTime(liveTimer)}
+                    <div className="space-y-4">
+                        {/* Task info & Actions — vertical on mobile, horizontal on sm+ */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                            <div className="space-y-2 flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="text-[14px] font-semibold text-[var(--color-text-primary)]">
+                                        {currentTask.subjectTitle} - {currentTask.chapterTitle}
+                                    </h3>
+                                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold", reasonBadgeClass(currentTask.reason))}>
+                                        {reasonLabel(currentTask.reason)}
                                     </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-[12px] text-[var(--color-text-muted)] flex-wrap">
+                                    <span className="flex items-center gap-1.5">
+                                        <Clock className="h-3.5 w-3.5" />
+                                        45 min
+                                    </span>
+                                    <span className="px-2.5 py-1 rounded-full bg-[var(--color-bg-tertiary)] font-medium text-[var(--color-text-secondary)]">
+                                        {taskTypeLabel(currentTask.taskType, currentTask.annaleLevel)}
+                                    </span>
+                                    {isRunning && (
+                                        <span className="flex items-center gap-1.5 text-[var(--color-accent)] font-mono">
+                                            <Clock className="h-3.5 w-3.5 animate-pulse" />
+                                            {formatTime(liveTimer)}
+                                            {isPaused && <span className="text-amber-500 text-[10px] ml-1 uppercase font-bold tracking-wider">(En pause)</span>}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="shrink-0 flex items-center">
+                                {showRating ? (
+                                    <DifficultySelector onRate={(rating) => {
+                                        completeCurrentTask(rating);
+                                        saveTimingEntry(pendingDurationRef.current);
+                                        setShowRating(false);
+                                    }} />
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        {currentTask.status === 'pending' && (
+                                            <>
+                                                <button onClick={handleStart}
+                                                    className="bg-[var(--color-accent)] hover:opacity-90 text-white px-5 py-2.5 rounded-xl text-[13px] font-semibold flex items-center gap-2 transition-all shadow-sm">
+                                                    <Play className="h-4 w-4" />
+                                                    Commencer
+                                                </button>
+                                                <button onClick={skipCurrentTask}
+                                                    className="p-2.5 rounded-xl text-[var(--color-text-hint)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-secondary)] transition-colors"
+                                                    title="Passer au suivant">
+                                                    <SkipForward className="h-4 w-4" />
+                                                </button>
+                                            </>
+                                        )}
+                                        {currentTask.status === 'in-progress' && (
+                                            <>
+                                                <button onClick={() => setIsPaused(!isPaused)}
+                                                    className={cn(
+                                                        "p-2.5 rounded-xl transition-all shadow-sm",
+                                                        isPaused ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-white border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]"
+                                                    )}
+                                                    title={isPaused ? "Reprendre" : "Mettre en pause"}>
+                                                    {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                                                </button>
+                                                <button onClick={handleStop}
+                                                    className="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-[13px] font-semibold flex items-center gap-2 transition-all shadow-sm">
+                                                    <Square className="h-3 w-3" />
+                                                    Terminer
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
-
-                        {/* Difficulty rating (shown after clicking "Terminer") */}
-                        {showRating ? (
-                            <DifficultySelector onRate={(rating) => {
-                                completeCurrentTask(rating);
-                                setShowRating(false);
-                            }} />
-                        ) : (
-                            /* Action buttons */
-                            <div className="flex items-center gap-2">
-                                {currentTask.status === 'pending' && (
-                                    <button onClick={startCurrentTask}
-                                        className="app-btn app-btn-primary text-xs flex-1">
-                                        <Play className="h-3.5 w-3.5" />
-                                        Commencer
-                                    </button>
-                                )}
-                                {currentTask.status === 'in-progress' && (
-                                    <button onClick={() => setShowRating(true)}
-                                        className="app-btn app-btn-secondary text-xs flex-1">
-                                        <Square className="h-3 w-3" />
-                                        Terminer
-                                    </button>
-                                )}
-                                {currentTask.status === 'pending' && (
-                                    <button onClick={skipCurrentTask}
-                                        className="app-btn-ghost p-2 rounded-lg text-[var(--color-text-hint)] hover:text-[var(--color-text-secondary)] transition-colors"
-                                        title="Passer">
-                                        <SkipForward className="h-3.5 w-3.5" />
-                                    </button>
-                                )}
-                            </div>
-                        )}
 
                         {/* Upcoming tasks preview */}
                         {session && currentTaskIndex < session.tasks.length - 1 && (

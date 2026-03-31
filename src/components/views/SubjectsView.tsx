@@ -122,7 +122,7 @@ export const SubjectsView = () => {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-2 mb-5">
+            <div className="flex items-center gap-2 mb-5 flex-wrap">
                 <Filter className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
                 {filters.map(f => (
                     <button
