@@ -5,6 +5,7 @@ import { BookOpen, LucideIcon } from 'lucide-react';
 import { validateSubjects } from '@/lib/validators';
 import { MEDICAL_ICON_MAP, MEDICAL_ICON_NAMES } from '@/components/icons/MedicalIcons';
 import type { MedIconProps } from '@/components/icons/MedicalIcons';
+import { createClient } from '@/utils/supabase/client';
 
 // Unified icon map: medical custom icons + BookOpen fallback
 export const ICON_MAP: Record<string, LucideIcon | React.FC<MedIconProps>> = {
@@ -81,18 +82,59 @@ function createDefaultProgress(): ChapterProgress {
 export const SubjectProvider = ({ children }: { children: ReactNode }) => {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
+    
+    // Client navigateur Supabase pour interagir avec user_progress
+    const supabase = createClient();
 
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setSubjects(validateSubjects(parsed));
-            } catch (e) {
-                console.error("Failed to parse subjects", e);
+        const loadData = async () => {
+            let localSubjects: Subject[] = [];
+            const saved = localStorage.getItem(STORAGE_KEY);
+            
+            // 1. Structure métier depuis le localStorage
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    localSubjects = validateSubjects(parsed);
+                } catch (e) {
+                    console.error("Failed to parse subjects", e);
+                }
             }
-        }
-        setIsLoaded(true);
+            
+            // 2. Fusion avec les états "User Progress" depuis Supabase 
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: progressList, error } = await supabase
+                        .from('user_progress')
+                        .select('chapter_id, status');
+                        
+                    if (!error && progressList) {
+                        localSubjects = localSubjects.map(sub => ({
+                            ...sub,
+                            chapters: sub.chapters.map(chap => {
+                                const remoteProg = progressList.find(p => p.chapter_id === chap.id);
+                                if (remoteProg) {
+                                    try {
+                                        return { ...chap, status: JSON.parse(remoteProg.status) };
+                                    } catch(e) { 
+                                        // Ignore silently if JSON is corrupted
+                                    }
+                                }
+                                return chap;
+                            })
+                        }));
+                    }
+                }
+            } catch (err) {
+                console.warn("Impossible de vérifier Supabase au chargement", err);
+            }
+
+            setSubjects(localSubjects);
+            setIsLoaded(true);
+        };
+        
+        loadData();
     }, []);
 
     useEffect(() => {
@@ -180,19 +222,41 @@ export const SubjectProvider = ({ children }: { children: ReactNode }) => {
         }));
     };
 
-    const toggleChapterStatus = (subjectId: string, chapterId: string, type: keyof ChapterStatus) => {
+    const toggleChapterStatus = async (subjectId: string, chapterId: string, type: keyof ChapterStatus) => {
+        // MAJ Optimiste UI
+        let newStatus: ChapterStatus | null = null;
+
         setSubjects(prev => prev.map(sub => {
             if (sub.id !== subjectId) return sub;
             return {
                 ...sub,
-                chapters: sub.chapters.map(c =>
-                    c.id === chapterId ? {
-                        ...c,
-                        status: { ...c.status, [type]: !c.status[type] }
-                    } : c
-                )
+                chapters: sub.chapters.map(c => {
+                    if (c.id === chapterId) {
+                        newStatus = { ...c.status, [type]: !c.status[type] };
+                        return { ...c, status: newStatus };
+                    }
+                    return c;
+                })
             };
         }));
+
+        // Envoi silencieux à Supabase (UPSERT)
+        if (newStatus) {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    await supabase.from('user_progress').upsert({
+                        user_id: user.id,
+                        chapter_id: chapterId,
+                        status: JSON.stringify(newStatus),
+                        // updated_at est généré par `NOW()` dans le SGDB automatiquement mais on informe Supabase
+                    }, { onConflict: 'user_id,chapter_id' } as any); 
+                    // note: le Typage de OnConflict dans le package js de Supabase est strict, 'user_id,chapter_id' fonctionne grace à la constraint Postgres UNIQUE.
+                }
+            } catch (err) {
+                console.error("Erreur de sauvegarde sur Supabase", err);
+            }
+        }
     };
 
     const updateChapterProgress = (subjectId: string, chapterId: string, updates: Partial<ChapterProgress>) => {
