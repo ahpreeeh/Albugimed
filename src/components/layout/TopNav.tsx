@@ -1,0 +1,106 @@
+"use client";
+
+import React, { useState } from "react";
+import { useView, ViewType } from "@/context/ViewContext";
+import { StrategyModal } from "@/components/features/session/StrategyModal";
+import { ThemeSettingsPanel } from "@/components/layout/ThemeSettingsPanel";
+import { cn } from "@/lib/utils";
+import {
+    Stethoscope,
+    LayoutGrid,
+    BookOpen,
+    GraduationCap,
+    Calendar,
+    Settings2,
+    Settings,
+} from "lucide-react";
+
+// ─── Nav items ────────────────────────────────────────────────────────
+const navItems: { id: ViewType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: "cockpit",    label: "Aujourd'hui", icon: LayoutGrid },
+    { id: "subjects",   label: "Matières",    icon: BookOpen },
+    { id: "simulation", label: "Simulation",  icon: GraduationCap },
+    { id: "planning",   label: "Planning",    icon: Calendar },
+];
+
+// ─── Top Navigation Bar ───────────────────────────────────────────────
+const TopNav = () => {
+    const { activeView, setActiveView } = useView();
+    const [strategieOpen, setStrategieOpen] = useState(false);
+    const [isThemePanelOpen, setIsThemePanelOpen] = useState(false);
+
+    return (
+        <>
+            <nav
+                className="sticky top-0 z-30 border-b"
+                style={{
+                    background: "var(--color-bg-nav, var(--color-bg-surface))",
+                    borderColor: "var(--color-border)",
+                }}
+            >
+                <div className="mx-auto max-w-[1560px] px-5 sm:px-7">
+                    <div className="flex h-14 items-center justify-between gap-4">
+
+                        {/* ── Left: Logo ── */}
+                        <div className="flex items-center gap-2.5 shrink-0">
+                            <div className="app-on-accent flex h-[30px] w-[30px] items-center justify-center rounded-[10px] bg-[var(--color-accent)]">
+                                <Stethoscope className="h-4 w-4" />
+                            </div>
+                            <span className="text-[13px] font-bold text-[var(--color-text-primary)] tracking-tight">
+                                AlbugiMed
+                            </span>
+                        </div>
+
+                        {/* ── Center: Nav items ── */}
+                        <div className="flex items-center gap-0.5">
+                            {navItems.map((item) => {
+                                const isActive = activeView === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setActiveView(item.id)}
+                                        className={cn(
+                                            "flex items-center gap-1.5 rounded-md px-3.5 py-2 text-[13px] font-medium transition-all duration-150",
+                                            isActive
+                                                ? "bg-[var(--color-accent-muted)] text-[var(--color-accent)]"
+                                                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-active-nav)] hover:text-[var(--color-text-primary)]"
+                                        )}
+                                    >
+                                        <item.icon className="h-3.5 w-3.5" />
+                                        {item.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* ── Right: actions ── */}
+                        <div className="flex items-center gap-1 shrink-0">
+                            <button
+                                onClick={() => setStrategieOpen(true)}
+                                className={cn(
+                                    "flex items-center gap-1.5 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-150",
+                                    "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-active-nav)] hover:text-[var(--color-text-primary)]"
+                                )}
+                            >
+                                <Settings2 className="h-3.5 w-3.5" />
+                                Stratégie
+                            </button>
+                            <button
+                                onClick={() => setIsThemePanelOpen(true)}
+                                title="Paramètres d'apparence"
+                                className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-hint)] hover:bg-[var(--color-bg-active-nav)] hover:text-[var(--color-text-primary)] transition-colors"
+                            >
+                                <Settings className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <StrategyModal open={strategieOpen} onOpenChange={setStrategieOpen} />
+            <ThemeSettingsPanel isOpen={isThemePanelOpen} onClose={() => setIsThemePanelOpen(false)} />
+        </>
+    );
+};
+
+export default TopNav;
