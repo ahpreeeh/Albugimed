@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { useSubjects } from '@/context/SubjectContext';
 import { useStrategy } from '@/context/StrategyContext';
 import type { Subject, Chapter, ChapterProgress } from '@/context/SubjectContext';
@@ -10,6 +10,7 @@ import type {
     DailySession, SessionTask, SessionReason, DifficultyRating,
 } from '@/types/session';
 import { toLocalISOString } from '@/lib/utils';
+import { createClient } from '@/utils/supabase/client';
 
 // ─── Storage ─────────────────────────────────────────────────────────
 const SESSION_STORAGE_KEY = 'med-pilot-daily-session';
@@ -270,41 +271,90 @@ function getTargetSubjects(strategy: ActiveStrategy, subjects: Subject[]): Subje
 export const SessionEngineProvider = ({ children }: { children: ReactNode }) => {
     const { subjects, updateChapterProgress } = useSubjects();
     const { strategy } = useStrategy();
-    const [session, setSession] = useState<DailySession | null>(null);
-    const [isLoaded, setIsLoaded] = useState(false);
+    const supabase = useRef(createClient()).current;
 
-    const today = toLocalISOString(new Date());
-
-    // Load from localStorage on mount
-    useEffect(() => {
+    // Init depuis localStorage (synchrone)
+    const [session, setSession] = useState<DailySession | null>(() => {
+        if (typeof window === 'undefined') return null;
         try {
             const raw = localStorage.getItem(SESSION_STORAGE_KEY);
             if (raw) {
                 const parsed = JSON.parse(raw) as DailySession;
-                // Only restore if it's today's session
-                if (parsed.date === today) {
-                    setSession(parsed);
-                }
+                const today = toLocalISOString(new Date());
+                return parsed.date === today ? parsed : null;
             }
-        } catch (e) {
-            console.error('[SessionEngine] Failed to parse stored session', e);
-        }
-        setIsLoaded(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        } catch { /* ignore */ }
+        return null;
+    });
 
-    // Persist session
+    const [isCloudLoaded, setIsCloudLoaded] = useState(false);
+
+    const today = toLocalISOString(new Date());
+
+    // ── Chargement depuis Supabase au montage ────────────────────────
     useEffect(() => {
-        if (!isLoaded) return;
-        if (session) {
-            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+        let cancelled = false;
+
+        async function loadFromCloud() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) { if (!cancelled) setIsCloudLoaded(true); return; }
+
+                const { data: row } = await supabase
+                    .from('user_data')
+                    .select('data_value')
+                    .eq('user_id', user.id)
+                    .eq('data_key', SESSION_STORAGE_KEY)
+                    .maybeSingle();
+
+                if (!cancelled && row?.data_value) {
+                    const cloudSession = row.data_value as DailySession;
+                    // On ne restaure que la session d'aujourd'hui
+                    if (cloudSession.date === today) {
+                        setSession(cloudSession);
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(cloudSession));
+                    }
+                }
+            } catch (err) {
+                console.warn('[SessionEngine] Chargement Supabase échoué', err);
+            } finally {
+                if (!cancelled) setIsCloudLoaded(true);
+            }
         }
-    }, [session, isLoaded]);
+
+        loadFromCloud();
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [today]);
+
+    // ── Persistance : localStorage + Supabase ────────────────────────
+    const persistSession = useCallback((s: DailySession | null) => {
+        if (s) {
+            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(s));
+        } else {
+            localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user || !s) return;
+            supabase.from('user_data').upsert(
+                { user_id: user.id, data_key: SESSION_STORAGE_KEY, data_value: s },
+                { onConflict: 'user_id,data_key' },
+            );
+        });
+    }, [supabase]);
+
+    // ── Mutation helper ───────────────────────────────────────────────
+    const mutateSession = useCallback((updater: (prev: DailySession | null) => DailySession | null) => {
+        setSession(prev => {
+            const next = updater(prev);
+            persistSession(next);
+            return next;
+        });
+    }, [persistSession]);
 
     // ── Generate ─────────────────────────────────────────────────────
     const generateSession = useCallback((load: DayLoad) => {
         if (!strategy) return;
-
         const tasks = generateDailyTasks(strategy, subjects, load);
         const newSession: DailySession = {
             date: today,
@@ -312,8 +362,8 @@ export const SessionEngineProvider = ({ children }: { children: ReactNode }) => 
             tasks,
             generatedAt: Date.now(),
         };
-        setSession(newSession);
-    }, [strategy, subjects, today]);
+        mutateSession(() => newSession);
+    }, [strategy, subjects, today, mutateSession]);
 
     // ── Task navigation ──────────────────────────────────────────────
     const currentTaskIndex = useMemo(() => {
@@ -333,14 +383,14 @@ export const SessionEngineProvider = ({ children }: { children: ReactNode }) => 
 
     // ── Actions ──────────────────────────────────────────────────────
     const updateTask = useCallback((taskId: string, updates: Partial<SessionTask>) => {
-        setSession(prev => {
+        mutateSession(prev => {
             if (!prev) return prev;
             return {
                 ...prev,
                 tasks: prev.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t),
             };
         });
-    }, []);
+    }, [mutateSession]);
 
     const startCurrentTask = useCallback(() => {
         if (!currentTask) return;
@@ -373,11 +423,11 @@ export const SessionEngineProvider = ({ children }: { children: ReactNode }) => 
 
         updateChapterProgress(currentTask.subjectId, currentTask.chapterId, progressUpdates);
 
-        // Save to history
+        // Save to history (localStorage + Supabase)
         try {
             const historyRaw = localStorage.getItem(HISTORY_KEY);
             const history = historyRaw ? JSON.parse(historyRaw) : [];
-            history.push({
+            const entry = {
                 date: toLocalISOString(new Date()),
                 taskType: currentTask.taskType,
                 reason: currentTask.reason,
@@ -385,9 +435,17 @@ export const SessionEngineProvider = ({ children }: { children: ReactNode }) => 
                 chapterTitle: currentTask.chapterTitle,
                 durationMs: currentTask.startedAt ? now - currentTask.startedAt : 0,
                 difficultyRating: rating,
+            };
+            const updatedHistory = [...history, entry].slice(-500);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+            // Sync history to Supabase (fire-and-forget)
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                if (!user) return;
+                supabase.from('user_data').upsert(
+                    { user_id: user.id, data_key: HISTORY_KEY, data_value: updatedHistory },
+                    { onConflict: 'user_id,data_key' },
+                );
             });
-            // Keep last 500 entries
-            localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-500)));
         } catch { /* ignore */ }
     }, [currentTask, updateTask, updateChapterProgress]);
 

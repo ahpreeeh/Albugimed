@@ -1,9 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, ReactNode } from 'react';
 import type { ActiveStrategy } from '@/types/strategy';
+import { useCloudStorage } from '@/hooks/useCloudStorage';
 
-// ─── Storage ─────────────────────────────────────────────────────────
+// ─── Storage key ─────────────────────────────────────────────────────
 const STORAGE_KEY = 'med-pilot-active-strategy';
 
 // ─── Context shape ───────────────────────────────────────────────────
@@ -18,48 +19,25 @@ const StrategyContext = createContext<StrategyContextType | undefined>(undefined
 
 // ─── Provider ────────────────────────────────────────────────────────
 export const StrategyProvider = ({ children }: { children: ReactNode }) => {
-    const [strategy, _setStrategy] = useState<ActiveStrategy | null>(null);
-    const [isLoaded, setIsLoaded] = useState(false);
+    const { data: rawStrategy, save, clear } = useCloudStorage<ActiveStrategy | null>(
+        STORAGE_KEY,
+        null,
+    );
 
-    // Load from localStorage on mount
-    useEffect(() => {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) {
-                const parsed = JSON.parse(raw) as ActiveStrategy;
-                // Guard: ensure this is a valid strategy from the current schema.
-                // Old entries (pre-refactor) had 'targetSubjectIds' instead of
-                // 'preparationSubjectIds' and will be discarded to avoid runtime errors.
-                if (parsed && parsed.mode && Array.isArray(parsed.preparationSubjectIds)) {
-                    _setStrategy(parsed);
-                } else {
-                    // Stale format — clear it so the user sets a fresh strategy
-                    localStorage.removeItem(STORAGE_KEY);
-                }
-            }
-        } catch (e) {
-            console.error('[StrategyContext] Failed to parse stored strategy', e);
-        }
-        setIsLoaded(true);
-    }, []);
+    // Guard : rejeter les stratégies avec l'ancien schéma (pre-refactor)
+    const strategy: ActiveStrategy | null =
+        rawStrategy &&
+        rawStrategy.mode &&
+        Array.isArray(rawStrategy.preparationSubjectIds)
+            ? rawStrategy
+            : null;
 
-    // Persist to localStorage on change
-    useEffect(() => {
-        if (!isLoaded) return;
-        if (strategy) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(strategy));
-        } else {
-            localStorage.removeItem(STORAGE_KEY);
-        }
-    }, [strategy, isLoaded]);
+    const setStrategy = useCallback(
+        (s: ActiveStrategy) => save(s),
+        [save],
+    );
 
-    const setStrategy = useCallback((s: ActiveStrategy) => {
-        _setStrategy(s);
-    }, []);
-
-    const clearStrategy = useCallback(() => {
-        _setStrategy(null);
-    }, []);
+    const clearStrategy = useCallback(() => clear(), [clear]);
 
     return (
         <StrategyContext.Provider value={{

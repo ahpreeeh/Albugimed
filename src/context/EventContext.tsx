@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import { validateEvents } from '@/lib/validators';
+import { useCloudStorage } from '@/hooks/useCloudStorage';
 
 export interface AgendaEvent {
     id: string;
@@ -30,18 +31,16 @@ export const useEvents = () => {
     return context;
 };
 
-// Expand weekly recurring events for a date range
+// ─── Helpers ─────────────────────────────────────────────────────────
 function expandRecurring(events: AgendaEvent[], checkDate: string): AgendaEvent[] {
     const target = new Date(checkDate);
     const targetDay = target.getDay();
-
     return events.filter(e => {
         if (e.date === checkDate) return true;
         if (e.recurrence === 'weekly') {
             const eventDay = new Date(e.date).getDay();
             if (eventDay === targetDay) {
-                const eventDate = new Date(e.date);
-                return target >= eventDate; // only show from creation date forward
+                return target >= new Date(e.date);
             }
         }
         return false;
@@ -52,44 +51,35 @@ function toDateStr(d: Date): string {
     return d.toISOString().split('T')[0];
 }
 
+// ─── Provider ────────────────────────────────────────────────────────
 export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [events, setEvents] = useState<AgendaEvent[]>([]);
-    const [isInitialized, setIsInitialized] = useState(false);
+    const { data: rawEvents, saveWith } = useCloudStorage<AgendaEvent[]>(
+        'med-pilot-events',
+        [],
+    );
 
-    useEffect(() => {
-        const saved = localStorage.getItem('med-pilot-events');
-        if (saved) {
-            try {
-                setEvents(validateEvents(JSON.parse(saved)));
-            } catch (e) {
-                console.error("Failed to parse events", e);
-            }
-        }
-        setIsInitialized(true);
-    }, []);
+    // Valider les données au chargement
+    const events: AgendaEvent[] = (() => {
+        try { return validateEvents(rawEvents); } catch { return []; }
+    })();
 
-    useEffect(() => {
-        if (!isInitialized) return;
-        localStorage.setItem('med-pilot-events', JSON.stringify(events));
-    }, [events, isInitialized]);
+    const addEvent = useCallback((event: Omit<AgendaEvent, 'id'>) => {
+        saveWith(prev => [...validateEvents(prev), { ...event, id: crypto.randomUUID() }]);
+    }, [saveWith]);
 
-    const addEvent = (event: Omit<AgendaEvent, 'id'>) => {
-        setEvents(prev => [...prev, { ...event, id: crypto.randomUUID() }]);
-    };
+    const removeEvent = useCallback((id: string) => {
+        saveWith(prev => prev.filter(e => e.id !== id));
+    }, [saveWith]);
 
-    const removeEvent = (id: string) => {
-        setEvents(prev => prev.filter(e => e.id !== id));
-    };
+    const updateEvent = useCallback((id: string, updates: Partial<Omit<AgendaEvent, 'id'>>) => {
+        saveWith(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+    }, [saveWith]);
 
-    const updateEvent = (id: string, updates: Partial<Omit<AgendaEvent, 'id'>>) => {
-        setEvents(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
-    };
-
-    const getEventsForDate = (date: string): AgendaEvent[] => {
+    const getEventsForDate = useCallback((date: string): AgendaEvent[] => {
         return expandRecurring(events, date);
-    };
+    }, [events]);
 
-    const getEventsForWeek = (weekStart: Date): Map<string, AgendaEvent[]> => {
+    const getEventsForWeek = useCallback((weekStart: Date): Map<string, AgendaEvent[]> => {
         const map = new Map<string, AgendaEvent[]>();
         for (let i = 0; i < 7; i++) {
             const d = new Date(weekStart);
@@ -98,7 +88,7 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             map.set(key, expandRecurring(events, key));
         }
         return map;
-    };
+    }, [events]);
 
     return (
         <EventContext.Provider value={{ events, addEvent, removeEvent, updateEvent, getEventsForDate, getEventsForWeek }}>

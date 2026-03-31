@@ -1,18 +1,19 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { BookOpen, LucideIcon } from 'lucide-react';
 import { validateSubjects } from '@/lib/validators';
 import { MEDICAL_ICON_MAP, MEDICAL_ICON_NAMES } from '@/components/icons/MedicalIcons';
 import type { MedIconProps } from '@/components/icons/MedicalIcons';
 import { createClient } from '@/utils/supabase/client';
 
-// Unified icon map: medical custom icons + BookOpen fallback
+// ─── Icon map ─────────────────────────────────────────────────────────
 export const ICON_MAP: Record<string, LucideIcon | React.FC<MedIconProps>> = {
     ...MEDICAL_ICON_MAP,
     BookOpen,
 };
 
+// ─── Types ────────────────────────────────────────────────────────────
 export interface ChapterStatus {
     t1: boolean;
     annales: boolean;
@@ -44,8 +45,8 @@ export interface Subject {
     iconName: string;
     chapters: Chapter[];
     examDate?: string;
-    year?: string;      // e.g. "Med3", "Med4", "Med5"
-    semester?: string;   // e.g. "S1", "S2"
+    year?: string;
+    semester?: string;
 }
 
 interface SubjectContextType {
@@ -79,98 +80,115 @@ function createDefaultProgress(): ChapterProgress {
     };
 }
 
+// ─── Provider ─────────────────────────────────────────────────────────
 export const SubjectProvider = ({ children }: { children: ReactNode }) => {
-    const [subjects, setSubjects] = useState<Subject[]>([]);
-    const [isLoaded, setIsLoaded] = useState(false);
-    
-    // Client navigateur Supabase pour interagir avec user_progress
-    const supabase = createClient();
+    // Init depuis localStorage immédiatement (UI instantanée)
+    const [subjects, setSubjects] = useState<Subject[]>(() => {
+        if (typeof window === 'undefined') return [];
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? validateSubjects(JSON.parse(raw)) : [];
+        } catch { return []; }
+    });
 
+    const supabase = useRef(createClient()).current;
+    const isCloudLoaded = useRef(false);
+
+    // ── Chargement depuis Supabase au montage ────────────────────────
     useEffect(() => {
-        const loadData = async () => {
-            let localSubjects: Subject[] = [];
-            const saved = localStorage.getItem(STORAGE_KEY);
-            
-            // 1. Structure métier depuis le localStorage
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    localSubjects = validateSubjects(parsed);
-                } catch (e) {
-                    console.error("Failed to parse subjects", e);
-                }
-            }
-            
-            // 2. Fusion avec les états "User Progress" depuis Supabase 
+        let cancelled = false;
+
+        async function loadFromCloud() {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    const { data: progressList, error } = await supabase
-                        .from('user_progress')
-                        .select('chapter_id, status');
-                        
-                    if (!error && progressList) {
-                        localSubjects = localSubjects.map(sub => ({
-                            ...sub,
-                            chapters: sub.chapters.map(chap => {
-                                const remoteProg = progressList.find(p => p.chapter_id === chap.id);
-                                if (remoteProg) {
-                                    try {
-                                        return { ...chap, status: JSON.parse(remoteProg.status) };
-                                    } catch(e) { 
-                                        // Ignore silently if JSON is corrupted
-                                    }
-                                }
-                                return chap;
-                            })
-                        }));
-                    }
+                if (!user) return;
+
+                const { data: row } = await supabase
+                    .from('user_data')
+                    .select('data_value')
+                    .eq('user_id', user.id)
+                    .eq('data_key', STORAGE_KEY)
+                    .maybeSingle();
+
+                if (!cancelled && row?.data_value) {
+                    const cloudSubjects = validateSubjects(row.data_value as Subject[]);
+                    setSubjects(cloudSubjects);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudSubjects));
                 }
             } catch (err) {
-                console.warn("Impossible de vérifier Supabase au chargement", err);
+                console.warn('[SubjectContext] Chargement Supabase échoué', err);
+            } finally {
+                if (!cancelled) isCloudLoaded.current = true;
             }
+        }
 
-            setSubjects(localSubjects);
-            setIsLoaded(true);
-        };
-        
-        loadData();
+        loadFromCloud();
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useEffect(() => {
-        if (isLoaded) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(subjects));
-        }
-    }, [subjects, isLoaded]);
+    // ── Persistance : localStorage + Supabase (fire-and-forget) ─────
+    const persist = useCallback((next: Subject[]) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) return;
+            supabase.from('user_data').upsert(
+                { user_id: user.id, data_key: STORAGE_KEY, data_value: next },
+                { onConflict: 'user_id,data_key' },
+            );
+        });
+    }, [supabase]);
 
-    const addSubject = (title: string, iconName: string, chapterTitles: string[], options?: { examDate?: string; year?: string; semester?: string }) => {
+    // ── Mutation helper : setSubjects + persist ──────────────────────
+    const mutate = useCallback((updater: (prev: Subject[]) => Subject[]) => {
+        setSubjects(prev => {
+            const next = updater(prev);
+            persist(next);
+            return next;
+        });
+    }, [persist]);
+
+    // ── CRUD Subjects ─────────────────────────────────────────────────
+    const addSubject = useCallback((
+        title: string,
+        iconName: string,
+        chapterTitles: string[],
+        options?: { examDate?: string; year?: string; semester?: string },
+    ) => {
         const newSubject: Subject = {
             id: crypto.randomUUID(),
             title,
             iconName,
-            chapters: chapterTitles.map(t => ({
-                id: crypto.randomUUID(),
-                title: t.trim(),
-                status: { t1: false, annales: false, t2: false },
-                progress: createDefaultProgress()
-            })).filter(c => c.title !== ''),
+            chapters: chapterTitles
+                .map(t => t.trim())
+                .filter(t => t !== '')
+                .map(t => ({
+                    id: crypto.randomUUID(),
+                    title: t,
+                    status: { t1: false, annales: false, t2: false },
+                    progress: createDefaultProgress(),
+                })),
             ...(options?.examDate && { examDate: options.examDate }),
             ...(options?.year && { year: options.year }),
             ...(options?.semester && { semester: options.semester }),
         };
-        setSubjects(prev => [...prev, newSubject]);
-    };
+        mutate(prev => [...prev, newSubject]);
+    }, [mutate]);
 
-    const updateSubject = (id: string, updates: Partial<Pick<Subject, 'title' | 'iconName' | 'examDate' | 'year' | 'semester'>>) => {
-        setSubjects(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-    };
+    const updateSubject = useCallback((
+        id: string,
+        updates: Partial<Pick<Subject, 'title' | 'iconName' | 'examDate' | 'year' | 'semester'>>,
+    ) => {
+        mutate(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    }, [mutate]);
 
-    const deleteSubject = (id: string) => {
-        setSubjects(prev => prev.filter(s => s.id !== id));
-    };
+    const deleteSubject = useCallback((id: string) => {
+        mutate(prev => prev.filter(s => s.id !== id));
+    }, [mutate]);
 
-    const addChapter = (subjectId: string, title: string) => {
-        setSubjects(prev => prev.map(sub => {
+    // ── CRUD Chapters ─────────────────────────────────────────────────
+    const addChapter = useCallback((subjectId: string, title: string) => {
+        mutate(prev => prev.map(sub => {
             if (sub.id !== subjectId) return sub;
             return {
                 ...sub,
@@ -178,14 +196,14 @@ export const SubjectProvider = ({ children }: { children: ReactNode }) => {
                     id: crypto.randomUUID(),
                     title: title.trim(),
                     status: { t1: false, annales: false, t2: false },
-                    progress: createDefaultProgress()
-                }]
+                    progress: createDefaultProgress(),
+                }],
             };
         }));
-    };
+    }, [mutate]);
 
-    const addChaptersBulk = (subjectId: string, titles: string[]) => {
-        setSubjects(prev => prev.map(sub => {
+    const addChaptersBulk = useCallback((subjectId: string, titles: string[]) => {
+        mutate(prev => prev.map(sub => {
             if (sub.id !== subjectId) return sub;
             const newChapters = titles
                 .map(t => t.trim())
@@ -194,107 +212,81 @@ export const SubjectProvider = ({ children }: { children: ReactNode }) => {
                     id: crypto.randomUUID(),
                     title: t,
                     status: { t1: false, annales: false, t2: false } as ChapterStatus,
-                    progress: createDefaultProgress()
+                    progress: createDefaultProgress(),
                 }));
             return { ...sub, chapters: [...sub.chapters, ...newChapters] };
         }));
-    };
+    }, [mutate]);
 
-    const editChapterTitle = (subjectId: string, chapterId: string, newTitle: string) => {
-        setSubjects(prev => prev.map(sub => {
+    const editChapterTitle = useCallback((subjectId: string, chapterId: string, newTitle: string) => {
+        mutate(prev => prev.map(sub => {
             if (sub.id !== subjectId) return sub;
             return {
                 ...sub,
                 chapters: sub.chapters.map(c =>
                     c.id === chapterId ? { ...c, title: newTitle } : c
-                )
+                ),
             };
         }));
-    };
+    }, [mutate]);
 
-    const deleteChapter = (subjectId: string, chapterId: string) => {
-        setSubjects(prev => prev.map(sub => {
+    const deleteChapter = useCallback((subjectId: string, chapterId: string) => {
+        mutate(prev => prev.map(sub => {
             if (sub.id !== subjectId) return sub;
-            return {
-                ...sub,
-                chapters: sub.chapters.filter(c => c.id !== chapterId)
-            };
+            return { ...sub, chapters: sub.chapters.filter(c => c.id !== chapterId) };
         }));
-    };
+    }, [mutate]);
 
-    const toggleChapterStatus = async (subjectId: string, chapterId: string, type: keyof ChapterStatus) => {
-        // MAJ Optimiste UI
-        let newStatus: ChapterStatus | null = null;
-
-        setSubjects(prev => prev.map(sub => {
+    const toggleChapterStatus = useCallback((
+        subjectId: string,
+        chapterId: string,
+        type: keyof ChapterStatus,
+    ) => {
+        mutate(prev => prev.map(sub => {
             if (sub.id !== subjectId) return sub;
             return {
                 ...sub,
                 chapters: sub.chapters.map(c => {
-                    if (c.id === chapterId) {
-                        newStatus = { ...c.status, [type]: !c.status[type] };
-                        return { ...c, status: newStatus };
-                    }
-                    return c;
-                })
+                    if (c.id !== chapterId) return c;
+                    return { ...c, status: { ...c.status, [type]: !c.status[type] } };
+                }),
             };
         }));
+    }, [mutate]);
 
-        // Envoi silencieux à Supabase (UPSERT)
-        if (newStatus) {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    await supabase.from('user_progress').upsert({
-                        user_id: user.id,
-                        chapter_id: chapterId,
-                        status: JSON.stringify(newStatus),
-                        // updated_at est généré par `NOW()` dans le SGDB automatiquement mais on informe Supabase
-                    }, { onConflict: 'user_id,chapter_id' } as any); 
-                    // note: le Typage de OnConflict dans le package js de Supabase est strict, 'user_id,chapter_id' fonctionne grace à la constraint Postgres UNIQUE.
-                }
-            } catch (err) {
-                console.error("Erreur de sauvegarde sur Supabase", err);
-            }
-        }
-    };
-
-    const updateChapterProgress = (subjectId: string, chapterId: string, updates: Partial<ChapterProgress>) => {
-        setSubjects(prev => prev.map(sub => {
+    const updateChapterProgress = useCallback((
+        subjectId: string,
+        chapterId: string,
+        updates: Partial<ChapterProgress>,
+    ) => {
+        mutate(prev => prev.map(sub => {
             if (sub.id !== subjectId) return sub;
             return {
                 ...sub,
                 chapters: sub.chapters.map(c =>
-                    c.id === chapterId ? {
-                        ...c,
-                        progress: { ...c.progress, ...updates }
-                    } : c
-                )
+                    c.id === chapterId ? { ...c, progress: { ...c.progress, ...updates } } : c
+                ),
             };
         }));
-    };
+    }, [mutate]);
 
     return (
         <SubjectContext.Provider value={{
             subjects, addSubject, updateSubject, deleteSubject,
             addChapter, addChaptersBulk, editChapterTitle, deleteChapter,
-            toggleChapterStatus, updateChapterProgress
+            toggleChapterStatus, updateChapterProgress,
         }}>
             {children}
         </SubjectContext.Provider>
     );
 };
 
+// ─── Hooks / exports ──────────────────────────────────────────────────
 export const useSubjects = () => {
     const context = useContext(SubjectContext);
-    if (context === undefined) {
-        throw new Error('useSubjects must be used within a SubjectProvider');
-    }
+    if (context === undefined) throw new Error('useSubjects must be used within a SubjectProvider');
     return context;
 };
 
-export const getIconComponent = (iconName: string) => {
-    return ICON_MAP[iconName] || BookOpen;
-};
-
+export const getIconComponent = (iconName: string) => ICON_MAP[iconName] || BookOpen;
 export const AVAILABLE_ICONS = [...MEDICAL_ICON_NAMES];
