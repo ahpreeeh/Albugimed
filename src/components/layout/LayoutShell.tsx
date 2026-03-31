@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import TopNav from './TopNav';
 import { ViewProvider } from '@/context/ViewContext';
 import { SubjectProvider } from '@/context/SubjectContext';
@@ -8,12 +8,30 @@ import { EventProvider } from '@/context/EventContext';
 import { PlanningProvider } from '@/context/PlanningContext';
 import { StrategyProvider } from '@/context/StrategyContext';
 import { SessionEngineProvider } from '@/context/SessionEngineContext';
+import { MigrationRunner } from '@/components/features/migration/MigrationRunner';
+import { createClient } from '@/utils/supabase/client';
 
 interface LayoutShellProps {
     children: React.ReactNode;
 }
 
 const LayoutShell = ({ children }: LayoutShellProps) => {
+    const [userId, setUserId] = useState<string | null>(null);
+
+    // Récupère l'userId de la session Supabase courante
+    useEffect(() => {
+        const supabase = createClient();
+        supabase.auth.getSession().then(({ data }) => {
+            setUserId(data.session?.user.id ?? null);
+        });
+
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUserId(session?.user.id ?? null);
+        });
+
+        return () => listener.subscription.unsubscribe();
+    }, []);
+
     return (
         <SubjectProvider>
             <EventProvider>
@@ -39,6 +57,9 @@ const LayoutShell = ({ children }: LayoutShellProps) => {
                                             {children}
                                         </div>
                                     </main>
+
+                                    {/* Migration localStorage → Supabase (s'exécute une seule fois après login) */}
+                                    {userId && <MigrationRunner userId={userId} />}
                                 </div>
                             </ViewProvider>
                         </SessionEngineProvider>
