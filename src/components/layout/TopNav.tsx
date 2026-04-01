@@ -13,6 +13,7 @@ import {
     Calendar,
     Settings2,
     Settings,
+    Sparkles,
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────
@@ -21,6 +22,7 @@ const navItems: { id: ViewType; label: string; icon: React.ComponentType<{ class
     { id: "subjects",   label: "Matières",    icon: BookOpen },
     { id: "simulation", label: "Simulation",  icon: GraduationCap },
     { id: "planning",   label: "Planning",    icon: Calendar },
+    { id: "coming",     label: "À venir",     icon: Sparkles },
 ];
 
 // ─── Top Navigation Bar ───────────────────────────────────────────────

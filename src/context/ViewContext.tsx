@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export type ViewType = 'cockpit' | 'subjects' | 'simulation' | 'planning';
+export type ViewType = 'cockpit' | 'subjects' | 'simulation' | 'planning' | 'coming';
 
 interface ViewContextType {
     activeView: ViewType;
