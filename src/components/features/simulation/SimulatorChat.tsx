@@ -254,7 +254,7 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
             const errorStr = String((error as Error)?.message || error || '');
             let errorText = "Erreur de connexion à l'IA.";
             if (errorStr.includes('401') || errorStr.includes('403')) errorText += " (Clé API invalide)";
-            else if (errorStr.includes('404')) errorText += ` (Modèle introuvable : « ${customModelId || "gemini-2.5-flash"} »)`;
+            else if (errorStr.includes('404')) errorText += ` (Modèle introuvable : « ${localModelId || "gemini-2.5-flash"} »)`;
             else if (errorStr.includes('429')) errorText += " (Trop de requêtes — Attendez)";
             else if (errorStr.includes('SAFETY') || errorStr.includes('blocked')) errorText += " (Bloqué par filtres de sécurité)";
             else if (errorStr.includes('Failed to fetch') || errorStr.includes('network')) errorText += " (Problème réseau)";
