@@ -5,6 +5,7 @@ import { CheckCircle2, Download, Sparkles, ArrowLeft } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { cn } from "@/lib/utils";
 import type { ErrorEntry, Flashcard } from "@/types";
+import { useGeminiConfig } from "@/hooks/useGeminiConfig";
 
 // --- COPIE FIDÈLE ---
 const ANKI_SYSTEM_PROMPT = `
@@ -25,21 +26,21 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
     const [errors, setErrors] = useState<ErrorEntry[]>([]);
     const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [apiKey, setApiKey] = useState("");
-    const [customModelId, setCustomModelId] = useState("");
     const [selectedErrorIds, setSelectedErrorIds] = useState<Set<string>>(new Set());
     const [currentBatchIds, setCurrentBatchIds] = useState<string[]>([]);
+    
+    const { apiKey, modelId } = useGeminiConfig();
 
     const newErrors = errors.filter(e => !e.isExported);
     const sortedErrors = [...errors].sort((a, b) => b.date - a.date);
 
     useEffect(() => {
         const stored = localStorage.getItem("med-pilot-error-bank");
-        if (stored) setErrors(JSON.parse(stored));
-        const key = localStorage.getItem("med-pilot-gemini-key");
-        if (key) setApiKey(key);
-        const model = localStorage.getItem("med-pilot-gemini-model");
-        if (model) setCustomModelId(model);
+        if (stored) {
+            try {
+                setErrors(JSON.parse(stored));
+            } catch(e) { /* ignore parse error */ }
+        }
     }, []);
 
     const toggleSelection = (id: string) => {
@@ -56,15 +57,15 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
     // --- COPIE FIDÈLE de la logique Gemini ---
     const handleGenerate = async (targetIds: string[]) => {
         if (targetIds.length === 0) return;
-        if (!apiKey) { alert("Configurez votre clé API dans le Simulateur."); return; }
+        if (!apiKey) { alert("Configurez votre clé API dans le Simulateur d'abord."); return; }
 
         setIsGenerating(true);
         setCurrentBatchIds(targetIds);
 
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({
-                model: customModelId || "gemini-2.5-flash",
+            const modelInstance = genAI.getGenerativeModel({
+                model: modelId || "gemini-2.5-flash",
                 systemInstruction: ANKI_SYSTEM_PROMPT,
             });
 
@@ -73,7 +74,7 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
                 .map(e => `- Matière: ${e.matiere}\n- Contexte: ${e.question}\n- Erreur: ${e.erreur_commise}\n- Correction: ${e.correction}`)
                 .join("\n\n");
 
-            const result = await model.generateContent(`Voici les erreurs à convertir :\n\n${errorsText}`);
+            const result = await modelInstance.generateContent(`Voici les erreurs à convertir :\n\n${errorsText}`);
             const text = (await result.response).text();
 
             const jsonMatch = text.match(/\[[\s\S]*\]/);

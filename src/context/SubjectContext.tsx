@@ -135,7 +135,13 @@ export const SubjectProvider = ({ children }: { children: ReactNode }) => {
             supabase.from('user_data').upsert(
                 { user_id: user.id, data_key: STORAGE_KEY, data_value: next },
                 { onConflict: 'user_id,data_key' },
-            );
+            ).then(({ error }) => {
+                if (error) {
+                    console.error('[SubjectContext] Erreur lors de la synchronisation Supabase:', error);
+                } else {
+                    console.log('[SubjectContext] Synchronisation réussie.');
+                }
+            });
         });
     }, [supabase]);
 

@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, RefreshCw, Bot, User, AlertTriangle, Settings, Maximize2, Minimize2 } from 'lucide-react';
+import { Send, RefreshCw, Bot, User, AlertTriangle, Settings, Maximize2, Minimize2, Lock } from 'lucide-react';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage, ErrorEntry } from '@/types';
 import { validateChatMessages, validateErrorBank } from '@/lib/validators';
+import { useGeminiConfig } from '@/hooks/useGeminiConfig';
 
 // --- System Prompt — COPIE FIDÈLE ---
 const DP_SYSTEM_INSTRUCTIONS = `
@@ -81,21 +82,26 @@ interface SimulatorChatProps {
 }
 
 export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
-    const [apiKey, setApiKey] = useState("");
-    const [customModelId, setCustomModelId] = useState("");
-    const [isConfigOpen, setIsConfigOpen] = useState(false);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [input, setInput] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [isFullScreen, setIsFullScreen] = useState(false);
+    const { apiKey, modelId: cloudModelId, isLoaded: configLoaded, isLoggedIn, saveConfig } = useGeminiConfig();
+    const [localApiKey, setLocalApiKey]       = useState("");
+    const [localModelId, setLocalModelId]     = useState("");
+    const [isConfigOpen, setIsConfigOpen]     = useState(false);
+    const [messages, setMessages]             = useState<ChatMessage[]>([]);
+    const [input, setInput]                   = useState("");
+    const [isLoading, setIsLoading]           = useState(false);
+    const [isFullScreen, setIsFullScreen]     = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // Synchroniser les champs du formulaire config avec les valeurs cloud
     useEffect(() => {
-        const storedKey = localStorage.getItem('med-pilot-gemini-key');
-        const storedModelId = localStorage.getItem('med-pilot-gemini-model');
-        if (storedKey) setApiKey(storedKey);
-        if (storedModelId) setCustomModelId(storedModelId);
+        if (configLoaded) {
+            setLocalApiKey(apiKey);
+            setLocalModelId(cloudModelId);
+        }
+    }, [configLoaded, apiKey, cloudModelId]);
 
+    // Charger l'historique du chat depuis localStorage
+    useEffect(() => {
         const storedHistory = localStorage.getItem('dp_chat_history');
         if (storedHistory) {
             try {
@@ -116,10 +122,12 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
         }
     }, [messages]);
 
-    const handleSaveConfig = () => {
-        localStorage.setItem('med-pilot-gemini-key', apiKey);
-        if (customModelId) localStorage.setItem('med-pilot-gemini-model', customModelId);
-        else localStorage.removeItem('med-pilot-gemini-model');
+    const handleSaveConfig = async () => {
+        const ok = await saveConfig(localApiKey, localModelId);
+        if (!ok) {
+            alert("Impossible de sauvegarder : vous devez être connecté.");
+            return;
+        }
         setIsConfigOpen(false);
     };
 
@@ -204,7 +212,7 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
 
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
-            const effectiveModel = customModelId || "gemini-2.5-flash";
+            const effectiveModel = cloudModelId || "gemini-2.5-flash";
             const model = genAI.getGenerativeModel({
                 model: effectiveModel,
                 systemInstruction: DP_SYSTEM_INSTRUCTIONS,
@@ -278,8 +286,9 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
                     <div>
                         <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Simulateur EDN</h2>
                         <p className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1.5">
-                            {customModelId || "Gemini 2.5 Flash"}
-                            {!apiKey && <span className="text-amber-400 flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" /> Clé manquante</span>}
+                            {cloudModelId || "Gemini 2.5 Flash"}
+                            {!isLoggedIn && <span className="text-amber-400 flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> Connexion requise</span>}
+                            {isLoggedIn && !apiKey && <span className="text-amber-400 flex items-center gap-0.5"><AlertTriangle className="w-2.5 h-2.5" /> Clé manquante</span>}
                         </p>
                     </div>
                 </div>
@@ -308,15 +317,25 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
             {/* Config */}
             {isConfigOpen && (
                 <div className="space-y-3 border-b border-[var(--color-border-default)] bg-[var(--color-bg-tertiary)] px-4 py-4">
-                    <div>
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)] mb-1 block">Clé API Gemini</label>
-                        <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} className="app-input w-full text-xs" placeholder="Collez votre clé API..." />
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)] mb-1 block">Modèle (optionnel)</label>
-                        <input type="text" value={customModelId} onChange={e => setCustomModelId(e.target.value)} className="app-input w-full text-xs" placeholder="gemini-2.5-flash" />
-                    </div>
-                    <button onClick={handleSaveConfig} className="app-btn-primary text-xs w-full">Sauvegarder</button>
+                    {!isLoggedIn ? (
+                        <p className="text-xs text-amber-400 flex items-center gap-1.5">
+                            <Lock className="w-3.5 h-3.5" />
+                            Connectez-vous pour configurer votre clé API. Elle sera stockée de façon sécurisée dans votre compte.
+                        </p>
+                    ) : (
+                        <>
+                            <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)] mb-1 block">Clé API Gemini</label>
+                                <input type="password" value={localApiKey} onChange={e => setLocalApiKey(e.target.value)} className="app-input w-full text-xs" placeholder="Collez votre clé API..." />
+                                <p className="text-[9px] text-[var(--color-text-hint)] mt-1">🔒 Stockée dans votre compte Supabase, jamais en local.</p>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)] mb-1 block">Modèle (optionnel)</label>
+                                <input type="text" value={localModelId} onChange={e => setLocalModelId(e.target.value)} className="app-input w-full text-xs" placeholder="gemini-2.5-flash" />
+                            </div>
+                            <button onClick={handleSaveConfig} className="app-btn-primary text-xs w-full">Sauvegarder</button>
+                        </>
+                    )}
                 </div>
             )}
 

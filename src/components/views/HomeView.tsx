@@ -69,8 +69,12 @@ const EdnCountdown = () => {
 // ——— Stats Bar ———
 const StatsBar = () => {
     const { subjects } = useSubjects();
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => { setIsMounted(true); }, []);
 
     const stats = useMemo(() => {
+        if (!isMounted) return { totalCh: 0, doneCh: 0, totalFlags: 0, doneFlags: 0, subjects: 0 };
         let totalCh = 0, doneCh = 0, totalFlags = 0, doneFlags = 0;
         subjects.forEach(s => {
             s.chapters.forEach(c => {
@@ -82,7 +86,7 @@ const StatsBar = () => {
             });
         });
         return { totalCh, doneCh, totalFlags, doneFlags, subjects: subjects.length };
-    }, [subjects]);
+    }, [subjects, isMounted]);
 
     const pct = stats.totalFlags > 0 ? Math.round((stats.doneFlags / stats.totalFlags) * 100) : 0;
 
@@ -522,16 +526,17 @@ const UpcomingDeadlines = () => {
 
 // ——— Main ———
 export const HomeView = () => {
-    const greeting = useMemo(() => {
-        const h = new Date().getHours();
-        if (h < 12) return 'Bonjour';
-        if (h < 18) return 'Bon après-midi';
-        return 'Bonsoir';
-    }, []);
+    const [timeData, setTimeData] = useState({ greeting: 'Bonjour', dateLabel: '' });
 
-    const dateLabel = useMemo(() =>
-        new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()),
-    []);
+    useEffect(() => {
+        const h = new Date().getHours();
+        let greeting = 'Bonjour';
+        if (h >= 12 && h < 18) greeting = 'Bon après-midi';
+        else if (h >= 18) greeting = 'Bonsoir';
+
+        const dateLabel = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+        setTimeData({ greeting, dateLabel });
+    }, []);
 
     return (
         <div className="mx-auto max-w-[1560px]">
@@ -543,11 +548,11 @@ export const HomeView = () => {
                     </span>
                     <div>
                         <h1 className="text-[28px] font-semibold leading-none text-[var(--color-text-primary)]">
-                            {greeting}
+                            {timeData.greeting}
                         </h1>
                         <p className="app-meta mt-1 flex items-center gap-2">
                             <Clock className="h-3 w-3" />
-                            {dateLabel}
+                            {timeData.dateLabel}
                         </p>
                     </div>
                 </div>

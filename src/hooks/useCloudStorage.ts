@@ -29,21 +29,24 @@ export function useCloudStorage<T>(
   key: string,
   defaultValue: T,
 ): CloudStorageResult<T> {
-  // ── Init depuis localStorage (synchrone, ultra-rapide) ────────────────
-  const [data, setData] = useState<T>(() => {
-    if (typeof window === "undefined") return defaultValue;
-    try {
-      const raw = localStorage.getItem(key);
-      return raw !== null ? (JSON.parse(raw) as T) : defaultValue;
-    } catch {
-      return defaultValue;
-    }
-  });
-
+  const [data, setData] = useState<T>(defaultValue);
   const [isReady, setIsReady] = useState(false);
 
   // On garde une seule instance du client Supabase par hook
   const supabase = useRef(createClient()).current;
+
+  // ── Hydratation locale au montage ─────────────────────────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) {
+        setData(JSON.parse(raw) as T);
+      }
+    } catch {
+      // ignore
+    }
+  }, [key]);
+
 
   // ── Fetch cloud au montage ─────────────────────────────────────────────
   useEffect(() => {

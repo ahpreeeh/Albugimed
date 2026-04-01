@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
-import { Check, Settings2, X } from "lucide-react";
+import { Check, Settings2, X, Download, Upload, LogOut, Loader2 } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 import type { ThemeId } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
+import { useRef, useState } from "react";
 
 interface ThemeSettingsPanelProps {
     isOpen: boolean;
@@ -25,6 +26,133 @@ const themeOptions: Array<{
 
 export const ThemeSettingsPanel = ({ isOpen, onClose }: ThemeSettingsPanelProps) => {
     const { theme, setTheme } = useTheme();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleExport = async () => {
+        try {
+            setIsLoading(true);
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert("Vous n'êtes pas connecté.");
+                return;
+            }
+
+            const { data: rows, error } = await supabase
+                .from('user_data')
+                .select('data_key, data_value')
+                .eq('user_id', user.id);
+            
+            if (error) throw error;
+
+            const exportData = rows || [];
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            a.download = `albugimed-export-${dateStr}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Export error", err);
+            alert("Erreur lors de l'export des données.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleImportClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Réinitialiser la valeur pour permettre la sélection du même fichier plusieurs fois
+        e.target.value = '';
+
+        const confirmation = window.confirm("ATTENTION : Cette action va remplacer toutes vos données actuelles métier (Matières, Sessions, événements, etc.) par celles du fichier importé. Voulez-vous continuer ?");
+        if (!confirmation) return;
+
+        try {
+            setIsLoading(true);
+            const text = await file.text();
+            let parsedData;
+            try {
+                parsedData = JSON.parse(text);
+            } catch (err) {
+                alert("Le fichier sélectionné n'est pas un JSON valide.");
+                return;
+            }
+
+            if (!Array.isArray(parsedData) || !parsedData.every(item => item.data_key && item.data_value)) {
+                alert("La structure du fichier JSON est invalide pour cet import.");
+                return;
+            }
+
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert("Vous n'êtes pas connecté.");
+                return;
+            }
+
+            const upsertPayload = parsedData.map(item => ({
+                user_id: user.id,
+                data_key: item.data_key,
+                data_value: item.data_value
+            }));
+
+            const { error } = await supabase.from('user_data').upsert(upsertPayload, { onConflict: 'user_id,data_key' });
+            if (error) throw error;
+
+            parsedData.forEach(item => {
+                localStorage.setItem(item.data_key, JSON.stringify(item.data_value));
+            });
+
+            alert("Importation réussie. L'application va se recharger.");
+            window.location.reload();
+        } catch (err) {
+            console.error("Import error", err);
+            alert("Erreur lors de l'importation des données.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleLogout = async () => {
+        const confirmation = window.confirm("Voulez-vous vraiment vous déconnecter ?");
+        if (!confirmation) return;
+
+        try {
+            setIsLoading(true);
+            const supabase = createClient();
+            await supabase.auth.signOut({ scope: 'local' });
+
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('med-pilot-')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+
+            window.location.href = '/login';
+        } catch (err) {
+            console.error("Logout error", err);
+            alert("Erreur lors de la déconnexion.");
+            setIsLoading(false);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -96,6 +224,63 @@ export const ThemeSettingsPanel = ({ isOpen, onClose }: ThemeSettingsPanelProps)
                                         </button>
                                     );
                                 })}
+                            </div>
+                        </section>
+
+                        <section className="mt-8 border-t border-[var(--color-border-default)] pt-6">
+                            <div className="app-kicker text-[var(--color-status-error)]">COMPTE ET DONNÉES</div>
+                            <div className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                                Gérez vos données locales et votre session.
+                            </div>
+
+                            <div className="mt-4 flex flex-col gap-3">
+                                <button
+                                    onClick={handleExport}
+                                    disabled={isLoading}
+                                    className="flex w-full items-center justify-between rounded-[12px] border border-[var(--color-border-default)] bg-[var(--color-bg-card)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-bg-active-nav)] disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+                                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                        </div>
+                                        <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                                            Exporter les données
+                                        </span>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={handleImportClick}
+                                    disabled={isLoading}
+                                    className="flex w-full items-center justify-between rounded-[12px] border border-[var(--color-border-default)] bg-[var(--color-bg-card)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-bg-active-nav)] disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+                                            <Upload className="h-4 w-4" />
+                                        </div>
+                                        <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                                            Importer des données
+                                        </span>
+                                    </div>
+                                </button>
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    ref={fileInputRef}
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+
+                                <div className="mt-2">
+                                    <button
+                                        onClick={handleLogout}
+                                        disabled={isLoading}
+                                        className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-red-200 bg-red-50 px-4 py-3 text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
+                                    >
+                                        <LogOut className="h-4 w-4" />
+                                        <span className="text-sm font-medium">Se déconnecter</span>
+                                    </button>
+                                </div>
                             </div>
                         </section>
                     </div>

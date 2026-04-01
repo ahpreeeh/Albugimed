@@ -273,23 +273,24 @@ export const SessionEngineProvider = ({ children }: { children: ReactNode }) => 
     const { strategy } = useStrategy();
     const supabase = useRef(createClient()).current;
 
-    // Init depuis localStorage (synchrone)
-    const [session, setSession] = useState<DailySession | null>(() => {
-        if (typeof window === 'undefined') return null;
-        try {
-            const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-            if (raw) {
-                const parsed = JSON.parse(raw) as DailySession;
-                const today = toLocalISOString(new Date());
-                return parsed.date === today ? parsed : null;
-            }
-        } catch { /* ignore */ }
-        return null;
-    });
+    const [session, setSession] = useState<DailySession | null>(null);
 
     const [isCloudLoaded, setIsCloudLoaded] = useState(false);
 
     const today = toLocalISOString(new Date());
+
+    // ── Hydratation locale au montage ──────────────────────────────
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw) as DailySession;
+                if (parsed.date === today) {
+                    setSession(parsed);
+                }
+            }
+        } catch { /* ignore */ }
+    }, [today]);
 
     // ── Chargement depuis Supabase au montage ────────────────────────
     useEffect(() => {
