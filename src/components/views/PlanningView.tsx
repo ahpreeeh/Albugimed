@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useCallback, KeyboardEvent } from "react";
+import * as chrono from "chrono-node";
 import { usePlanning } from "@/context/PlanningContext";
 import { useEvents } from "@/context/EventContext";
 import type { AgendaEvent } from "@/context/EventContext";
@@ -57,84 +58,36 @@ const ACTIVE_BAR_COLORS: Record<PlanningEventType, string> = {
 
 type ViewMode = "week" | "recurrent" | "calendar";
 
-// ─── NLP Parser ────────────────────────────────────────────────────────
-// Parses French free-text like "rdv dentiste demain a 14h" or "cours de math le 13 mars a 18h"
+// ─── NLP Parser (chrono-node) ─────────────────────────────────────────
+// Retourne la date/heure parsée + le titre nettoyé.
+// Retourne null sur la date si chrono ne trouve rien (fallback = date sélectionnée).
 
-const MONTHS_FR: Record<string, number> = {
-    janvier: 0, fevrier: 1, février: 1, mars: 2, avril: 3, mai: 4, juin: 5,
-    juillet: 6, aout: 7, août: 7, septembre: 8, octobre: 9, novembre: 10, decembre: 11, décembre: 11,
-};
+function parseNLPInput(input: string): { title: string; date: string | null; time?: string } {
+    const results = chrono.fr.parse(input, new Date(), { forwardDate: true });
 
-function parseNLPInput(input: string): { title: string; date: string; time?: string } | null {
-    const lower = input.toLowerCase().replace(/['']/g, "'").trim();
-    const today = new Date();
-    let targetDate: Date | null = null;
-    let workingText = input.trim();
+    if (results.length > 0) {
+        const result = results[0];
+        const date = result.start.date();
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
-    // ── Relative dates ────────────────────────────────────
-    if (/\bdemain\b/i.test(lower)) {
-        targetDate = new Date(today);
-        targetDate.setDate(today.getDate() + 1);
-        workingText = workingText.replace(/\bdemain\b/gi, "").trim();
-    } else if (/\baujourd'?hui\b/i.test(lower)) {
-        targetDate = new Date(today);
-        workingText = workingText.replace(/\baujourd'?hui\b/gi, "").trim();
-    } else if (/\bapr[eè]s.?demain\b/i.test(lower)) {
-        targetDate = new Date(today);
-        targetDate.setDate(today.getDate() + 2);
-        workingText = workingText.replace(/\bapr[eè]s.?demain\b/gi, "").trim();
-    }
-
-    // ── Absolute dates: "le 13 mars" or "13/03" ───────────
-    if (!targetDate) {
-        const mDay = lower.match(/\bl[ea]?\s+(\d{1,2})\s+([a-zé]+)/i);
-        if (mDay) {
-            const day = parseInt(mDay[1]);
-            const monthName = mDay[2];
-            const monthIdx = MONTHS_FR[monthName];
-            if (monthIdx !== undefined) {
-                const year = today.getMonth() > monthIdx ? today.getFullYear() + 1 : today.getFullYear();
-                targetDate = new Date(year, monthIdx, day);
-                workingText = workingText.replace(mDay[0], "").trim();
-            }
+        let time: string | undefined;
+        if (result.start.isCertain("hour")) {
+            const hh = pad(result.start.get("hour") ?? 0);
+            const mm = pad(result.start.get("minute") ?? 0);
+            time = `${hh}:${mm}`;
         }
-        // "13/03" or "13-03"
-        if (!targetDate) {
-            const mSlash = lower.match(/(\d{1,2})[\/-](\d{1,2})/);
-            if (mSlash) {
-                const d = parseInt(mSlash[1]);
-                const mo = parseInt(mSlash[2]) - 1;
-                const year = today.getMonth() > mo ? today.getFullYear() + 1 : today.getFullYear();
-                targetDate = new Date(year, mo, d);
-                workingText = workingText.replace(mSlash[0], "").trim();
-            }
-        }
+
+        // Retire la partie date/heure du texte pour isoler le titre
+        let title = input.replace(result.text, "").trim();
+        title = title.replace(/^[\s,:-]+|[\s,:-]+$/g, "").replace(/\s+/g, " ");
+        if (!title) title = input.trim();
+
+        return { title, date: dateStr, time };
     }
 
-    if (!targetDate) return null;
-
-    // ── Time: "a 14h" or "à 14h30" or "14:00" ─────────────
-    let time: string | undefined;
-    const mTime = lower.match(/(?:à|a)\s*(\d{1,2})h(\d{0,2})/i) || lower.match(/(\d{1,2}):(\d{2})/);
-    if (mTime) {
-        const hh = mTime[1].padStart(2, "0");
-        const mm = (mTime[2] || "00").padStart(2, "0");
-        time = `${hh}:${mm}`;
-        workingText = workingText.replace(mTime[0], "").trim();
-    }
-
-    // ── Clean filler words from title ─────────────────────
-    let title = workingText
-        .replace(/\b(le|la|les|un|une|du|de|d'|pour|avec|en|au|aux|rdv|cours|reunion|réunion)\s+/gi, " ")
-        .replace(/[àa]\s*$/, "")
-        .replace(/\s+/g, " ")
-        .trim();
-    if (!title) title = input.trim();
-
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const dateStr = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
-
-    return { title, date: dateStr, time };
+    // Pas de date trouvée → titre = input brut, date = null (fallback sur date sélectionnée)
+    return { title: input.trim(), date: null };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -199,20 +152,26 @@ export function PlanningView() {
     const [nlpInput, setNlpInput] = useState("");
     const [nlpFeedback, setNlpFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
     const nlpRef = useRef<HTMLInputElement>(null);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
     const handleNLPSubmit = useCallback(() => {
         const raw = nlpInput.trim();
         if (!raw) return;
         const parsed = parseNLPInput(raw);
-        if (!parsed) {
-            setNlpFeedback({ ok: false, msg: "Je n'ai pas compris la date. Essayez : \"rdv dentiste demain à 14h\"" });
+
+        // Si chrono n'a pas trouvé de date, on utilise la date sélectionnée dans le calendrier
+        const finalDate = parsed.date ?? selectedDate;
+        if (!finalDate) {
+            setNlpFeedback({ ok: false, msg: "Sélectionnez un jour dans le calendrier ou précisez une date (ex: \"demain\", \"22 avril\")" });
+            setTimeout(() => setNlpFeedback(null), 3000);
             return;
         }
-        addEvent({ title: parsed.title, date: parsed.date, time: parsed.time, type: 'event' });
-        setNlpFeedback({ ok: true, msg: `✓ "${parsed.title}" ajouté le ${parsed.date}${parsed.time ? ` à ${parsed.time}` : ""}` });
+
+        addEvent({ title: parsed.title, date: finalDate, time: parsed.time, type: 'event' });
+        setNlpFeedback({ ok: true, msg: `✓ "${parsed.title}" ajouté le ${finalDate}${parsed.time ? ` à ${parsed.time}` : ""}` });
         setNlpInput("");
         setTimeout(() => setNlpFeedback(null), 3000);
-    }, [nlpInput, addEvent]);
+    }, [nlpInput, addEvent, selectedDate]);
 
     const handleNLPKey = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter") handleNLPSubmit();
@@ -447,12 +406,15 @@ export function PlanningView() {
                                     <div key={ri} className="grid grid-cols-7 divide-x divide-[var(--color-border)]">
                                         {row.map(cell => {
                                             const dayEvents = eventsForDate(cell.dateStr);
+                                            const isSelected = selectedDate === cell.dateStr;
                                             return (
                                                 <div
                                                     key={cell.dateStr}
-                                                    className={`min-h-[60px] sm:min-h-[90px] p-1 sm:p-2 transition-colors ${
+                                                    onClick={() => setSelectedDate(cell.dateStr)}
+                                                    className={`min-h-[60px] sm:min-h-[90px] p-1 sm:p-2 transition-colors cursor-pointer ${
                                                         !cell.isCurrentMonth ? "opacity-30" : ""
                                                     } ${
+                                                        isSelected ? "ring-2 ring-inset ring-[var(--color-accent)]" :
                                                         cell.isToday ? "bg-[var(--color-accent-muted)]" : "hover:bg-[var(--color-bg-active-nav)]"
                                                     }`}
                                                 >
