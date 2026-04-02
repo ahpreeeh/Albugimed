@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import type { ChatMessage, ErrorEntry } from '@/types';
 import { validateChatMessages, validateErrorBank } from '@/lib/validators';
 import { useGeminiConfig } from '@/hooks/useGeminiConfig';
+import { createClient } from '@/utils/supabase/client';
 
 // --- System Prompt — COPIE FIDÈLE ---
 const DP_SYSTEM_INSTRUCTIONS = `
@@ -175,6 +176,14 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
                     };
                     const updated = [newError, ...existingErrors];
                     localStorage.setItem('med-pilot-error-bank', JSON.stringify(updated));
+                    // Sync vers Supabase
+                    const supabase = createClient();
+                    supabase.auth.getUser().then(({ data: { user } }) => {
+                        if (user) supabase.from('user_data').upsert(
+                            { user_id: user.id, data_key: 'med-pilot-error-bank', data_value: updated },
+                            { onConflict: 'user_id,data_key' }
+                        );
+                    });
                     captured = true;
                 }
             } catch (e) {

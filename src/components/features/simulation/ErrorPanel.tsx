@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useCloudStorage } from '@/hooks/useCloudStorage';
 import {
     AlertCircle, ChevronDown, ChevronRight, Trash2, Pencil, Plus, X, Check,
     Download,
@@ -16,28 +17,15 @@ interface ErrorPanelProps {
     onRequestAnki: () => void;
 }
 
-export const ErrorPanel = ({ refreshTrigger, onRequestAnki }: ErrorPanelProps) => {
-    const [errors, setErrors] = useState<ErrorEntry[]>([]);
+export const ErrorPanel = ({ refreshTrigger: _refreshTrigger, onRequestAnki }: ErrorPanelProps) => {
+    const { data: rawErrors, save: saveErrors } = useCloudStorage<ErrorEntry[]>('med-pilot-error-bank', []);
+    const errors = validateErrorBank(rawErrors);
     const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
     const [filter, setFilter] = useState<FilterMode>('all');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ question: '', erreur_commise: '', correction: '', matiere: '' });
     const [showAddForm, setShowAddForm] = useState(false);
     const [addForm, setAddForm] = useState({ matiere: '', question: '', erreur_commise: '', correction: '' });
-
-    const loadErrors = useCallback(() => {
-        try {
-            const raw = JSON.parse(localStorage.getItem('med-pilot-error-bank') || '[]');
-            setErrors(validateErrorBank(raw));
-        } catch { setErrors([]); }
-    }, []);
-
-    useEffect(() => { loadErrors(); }, [loadErrors, refreshTrigger]);
-
-    const saveErrors = (updated: ErrorEntry[]) => {
-        setErrors(updated);
-        localStorage.setItem('med-pilot-error-bank', JSON.stringify(updated));
-    };
 
     const deleteError = (id: string) => {
         saveErrors(errors.filter(e => e.id !== id));

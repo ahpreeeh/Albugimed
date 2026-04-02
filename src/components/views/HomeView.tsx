@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import { useCloudStorage } from "@/hooks/useCloudStorage";
 import {
     LayoutGrid, Clock, BookOpen, AlertCircle,
     ChevronRight, Zap, GraduationCap, Calendar,
@@ -23,17 +24,11 @@ import { WeeklyTracker } from "@/components/features/tracking/WeeklyTracker";
 const EDN_DATE_KEY = 'med-pilot-edn-date';
 
 const EdnCountdown = () => {
-    const [ednDate, setEdnDate] = useState('');
+    const { data: ednDate, save: saveCloud } = useCloudStorage<string>(EDN_DATE_KEY, '');
     const [editing, setEditing] = useState(false);
 
-    useEffect(() => {
-        const stored = localStorage.getItem(EDN_DATE_KEY);
-        if (stored) setEdnDate(stored);
-    }, []);
-
     const save = (val: string) => {
-        setEdnDate(val);
-        localStorage.setItem(EDN_DATE_KEY, val);
+        saveCloud(val);
         setEditing(false);
     };
 
@@ -164,17 +159,9 @@ interface QuickTask { id: string; text: string; done: boolean; }
 
 const TasksNotes = () => {
     const [tab, setTab] = useState<'tasks' | 'notes'>('tasks');
-    const [tasks, setTasks] = useState<QuickTask[]>([]);
+    const { data: tasks, save: saveTasks } = useCloudStorage<QuickTask[]>(TASKS_KEY, []);
+    const { data: notes, save: saveNotes } = useCloudStorage<string>(NOTES_KEY, '');
     const [input, setInput] = useState('');
-    const [notes, setNotes] = useState('');
-
-    useEffect(() => {
-        try { setTasks(JSON.parse(localStorage.getItem(TASKS_KEY) || '[]')); } catch { setTasks([]); }
-        setNotes(localStorage.getItem(NOTES_KEY) || '');
-    }, []);
-
-    const saveTasks = (t: QuickTask[]) => { setTasks(t); localStorage.setItem(TASKS_KEY, JSON.stringify(t)); };
-    const saveNotes = (n: string) => { setNotes(n); localStorage.setItem(NOTES_KEY, n); };
 
     const addTask = () => {
         if (!input.trim()) return;

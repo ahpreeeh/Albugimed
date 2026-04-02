@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useCloudStorage } from "@/hooks/useCloudStorage";
 import { CheckCircle2, Download, Sparkles, ArrowLeft } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { cn } from "@/lib/utils";
@@ -23,25 +24,16 @@ interface AnkiExportProps {
 }
 
 export const AnkiExport = ({ onBack }: AnkiExportProps) => {
-    const [errors, setErrors] = useState<ErrorEntry[]>([]);
+    const { data: errors, save: saveErrors } = useCloudStorage<ErrorEntry[]>('med-pilot-error-bank', []);
     const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [selectedErrorIds, setSelectedErrorIds] = useState<Set<string>>(new Set());
     const [currentBatchIds, setCurrentBatchIds] = useState<string[]>([]);
-    
+
     const { apiKey, modelId } = useGeminiConfig();
 
     const newErrors = errors.filter(e => !e.isExported);
     const sortedErrors = [...errors].sort((a, b) => b.date - a.date);
-
-    useEffect(() => {
-        const stored = localStorage.getItem("med-pilot-error-bank");
-        if (stored) {
-            try {
-                setErrors(JSON.parse(stored));
-            } catch(e) { /* ignore parse error */ }
-        }
-    }, []);
 
     const toggleSelection = (id: string) => {
         const next = new Set(selectedErrorIds);
@@ -108,8 +100,7 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
         document.body.removeChild(link);
 
         const updated = errors.map(e => currentBatchIds.includes(e.id) ? { ...e, isExported: true } : e);
-        setErrors(updated);
-        localStorage.setItem("med-pilot-error-bank", JSON.stringify(updated));
+        saveErrors(updated);
         setFlashcards([]);
         setCurrentBatchIds([]);
         setSelectedErrorIds(new Set());

@@ -33,9 +33,6 @@ const KNOWN_KEYS: string[] = [
   "med-pilot-edn-date",
   "med-pilot-quick-tasks",
   "med-pilot-quick-notes",
-  // SimulatorChat — config Gemini (on migre la clé, pas la valeur si sensible)
-  "med-pilot-gemini-key",
-  "med-pilot-gemini-model",
   // PlanningContext
   "albugi-planning-slots",
   "albugi-planning-events",
