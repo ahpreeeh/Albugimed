@@ -20,11 +20,20 @@ import {
     Send,
     CalendarDays,
     Sparkles,
+    BookOpen,
+    Save,
+    X,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // ─── Constants ───────────────────────────────────────────────────────
 
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 8); // 8h → 23h
+const START_HOUR = 6;
+const END_HOUR = 23;
+const TOTAL_HOURS = END_HOUR - START_HOUR; // 17
+const HOUR_HEIGHT = 60; // px per hour
+const GRID_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT;
+const HOURS = Array.from({ length: TOTAL_HOURS }, (_, i) => i + START_HOUR); // 6h → 23h
 
 const TYPE_COLORS: Record<PlanningEventType, { card: string; dot: string; badge: string }> = {
     revision: {
@@ -120,6 +129,332 @@ function formatWeekRange(start: Date): string {
     return `${start.getDate()} ${months[start.getMonth()]} au ${end.getDate()} ${months[end.getMonth()]} ${end.getFullYear()}`;
 }
 
+// ─── Grid Helpers ───────────────────────────────────────────────────
+
+export interface GridItem {
+    id: string;
+    originalId: string;
+    title: string;
+    date: string;
+    startTime: string; // HH:MM
+    endTime: string;   // HH:MM
+    isDefault: boolean;
+    source: 'plan' | 'event';
+    type: 'event' | 'task' | PlanningEventType;
+    isCompleted?: boolean;
+    subjectTitle?: string;
+    // Layout (computed)
+    top: number;
+    height: number;
+    left: number;    // fraction 0–1
+    width: number;   // fraction 0–1
+}
+
+export interface ModalData {
+    mode: 'create' | 'edit';
+    date: string;
+    startTime: string;
+    endTime: string;
+    title: string;
+    type: 'event' | 'task';
+    editId?: string;
+}
+
+function timeToMinutes(time: string): number {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + (m || 0);
+}
+
+function minutesToTime(mins: number): string {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function timeToTop(time: string): number {
+    const mins = timeToMinutes(time);
+    return ((mins / 60) - START_HOUR) * HOUR_HEIGHT;
+}
+
+function durationToHeight(start: string, end: string): number {
+    const startMins = timeToMinutes(start);
+    const endMins = timeToMinutes(end);
+    return Math.max(((endMins - startMins) / 60) * HOUR_HEIGHT, 20); // min 20px
+}
+
+function addHourHelper(time: string, hours: number = 1): string {
+    const mins = timeToMinutes(time) + hours * 60;
+    return minutesToTime(Math.min(mins, END_HOUR * 60));
+}
+
+function layoutOverlaps(items: GridItem[]): GridItem[] {
+    if (items.length === 0) return [];
+    const sorted = [...items].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    const columns: GridItem[][] = [];
+
+    for (const item of sorted) {
+        const itemStart = timeToMinutes(item.startTime);
+        
+        let placed = false;
+        for (let c = 0; c < columns.length && c < 4; c++) {
+            const lastInCol = columns[c][columns[c].length - 1];
+            if (timeToMinutes(lastInCol.endTime) <= itemStart) {
+                columns[c].push(item);
+                placed = true;
+                break;
+            }
+        }
+        if (!placed) {
+            if (columns.length < 4) {
+                columns.push([item]);
+            } else {
+                columns[0].push(item);
+            }
+        }
+    }
+
+    const totalCols = Math.min(columns.length, 4);
+    const result: GridItem[] = [];
+
+    columns.forEach((col, colIndex) => {
+        col.forEach(item => {
+            result.push({
+                ...item,
+                left: colIndex / totalCols,
+                width: 1 / totalCols,
+            });
+        });
+    });
+
+    return result;
+}
+
+// ========== MODAL COMPONENT ==========
+const EventModal: React.FC<{
+    data: ModalData;
+    onClose: () => void;
+    onSave: (data: ModalData) => void;
+    onDelete?: () => void;
+}> = ({ data, onClose, onSave, onDelete }) => {
+    const [title, setTitle] = useState(data.title);
+    const [type, setType] = useState(data.type);
+    const [startTime, setStartTime] = useState(data.startTime);
+    const [endTime, setEndTime] = useState(data.endTime);
+    const titleRef = useRef<HTMLInputElement>(null);
+
+    React.useEffect(() => {
+        setTimeout(() => titleRef.current?.focus(), 100);
+    }, []);
+
+    const handleSave = () => {
+        onSave({ ...data, title: title || 'Nouvel événement', type, startTime, endTime });
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
+            <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm animate-in fade-in duration-200" />
+            <div
+                onClick={e => e.stopPropagation()}
+                className="relative w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+            >
+                <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+                    <span className="app-kicker block mb-0">
+                        {data.mode === 'create' ? 'Nouveau Bloc' : 'Modifier'}
+                    </span>
+                    <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[10px] text-[var(--color-text-muted)] hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-accent)] transition-colors">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div className="p-5 space-y-4">
+                    <input
+                        ref={titleRef}
+                        type="text"
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                        placeholder="Titre de l'événement..."
+                        className="w-full bg-transparent text-[16px] font-semibold text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none border-b border-slate-200 pb-2 focus:border-[var(--color-accent)] transition-colors"
+                        onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+                    />
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setType('event')}
+                            className={cn(
+                                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-bold uppercase tracking-wider transition-all border",
+                                type === 'event'
+                                    ? "bg-sky-50 border-sky-200 text-sky-600 shadow-sm"
+                                    : "bg-slate-50 border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-slate-300"
+                            )}
+                        >
+                            <CalendarDays className="w-4 h-4" />
+                            Événement
+                        </button>
+                        <button
+                            onClick={() => setType('task')}
+                            className={cn(
+                                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-bold uppercase tracking-wider transition-all border",
+                                type === 'task'
+                                    ? "bg-amber-50 border-amber-200 text-amber-600 shadow-sm"
+                                    : "bg-slate-50 border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-slate-300"
+                            )}
+                        >
+                            <BookOpen className="w-4 h-4" />
+                            Tâche
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                            <label className="app-kicker block mb-2">Début</label>
+                            <div className="relative">
+                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
+                                <input
+                                    type="time"
+                                    value={startTime}
+                                    onChange={e => {
+                                        setStartTime(e.target.value);
+                                        if (timeToMinutes(e.target.value) >= timeToMinutes(endTime)) {
+                                            setEndTime(addHourHelper(e.target.value));
+                                        }
+                                    }}
+                                    className="app-input w-full pl-9 font-mono"
+                                />
+                            </div>
+                        </div>
+                        <div className="text-[var(--color-text-muted)] font-mono text-lg mt-6">→</div>
+                        <div className="flex-1">
+                            <label className="app-kicker block mb-2">Fin</label>
+                            <div className="relative">
+                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
+                                <input
+                                    type="time"
+                                    value={endTime}
+                                    onChange={e => setEndTime(e.target.value)}
+                                    className="app-input w-full pl-9 font-mono"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="text-[13px] text-[var(--color-text-secondary)] bg-[var(--color-bg-sidebar)] rounded-lg px-3 py-2 flex items-center justify-center gap-2 border border-[var(--color-border)]">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(data.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between px-5 py-4 border-t border-[var(--color-border)] bg-[var(--color-bg-sidebar)]">
+                    {data.mode === 'edit' && onDelete ? (
+                        <button
+                            onClick={onDelete}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium text-red-500 hover:bg-red-50 transition-all"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Supprimer
+                        </button>
+                    ) : <div />}
+
+                    <button
+                        onClick={handleSave}
+                        className="app-btn app-btn-primary px-5"
+                    >
+                        <Save className="w-4 h-4 mr-1.5" />
+                        Enregistrer
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ========== GRID BLOCK COMPONENT ==========
+const GridBlock: React.FC<{
+    item: GridItem;
+    onClick: (item: GridItem) => void;
+    onDragStart: (e: React.DragEvent, item: GridItem) => void;
+}> = ({ item, onClick, onDragStart }) => {
+    const isPlan = item.source === 'plan';
+    const isTask = item.type === 'task';
+    const minHeight = item.height < 35;
+    
+    // For planning events, we can use their TYPE_COLORS if they have one
+    let dotClass = "bg-[var(--color-accent)]";
+    let cardClass = isTask ? "bg-amber-50 border-amber-200 hover:border-amber-300" : "bg-sky-50 border-sky-200 hover:border-sky-300";
+    let barClass = isTask ? "bg-amber-400" : "bg-sky-400";
+    let textClass = "text-slate-700";
+    let subTextClass = isTask ? "text-amber-600/70" : "text-sky-600/70";
+    let iconColor = isTask ? "text-amber-500" : "text-sky-500";
+    
+    if (isPlan && item.type in TYPE_COLORS) {
+        const tColor = TYPE_COLORS[item.type as PlanningEventType];
+        cardClass = tColor.card + " hover:brightness-95";
+        barClass = tColor.dot;
+        textClass = "text-[var(--color-text-primary)]";
+        subTextClass = "text-[var(--color-text-muted)]";
+        iconColor = "text-[var(--color-text-secondary)]";
+    }
+
+    return (
+        <div
+            draggable
+            onDragStart={e => onDragStart(e, item)}
+            onClick={e => { e.stopPropagation(); onClick(item); }}
+            style={{
+                position: 'absolute',
+                top: `${item.top}px`,
+                height: `${item.height}px`,
+                left: `calc(${item.left * 100}% + 1px)`,
+                width: `calc(${item.width * 100}% - 2px)`,
+            }}
+            className={cn(
+                "rounded-lg border cursor-pointer transition-all duration-200 overflow-hidden group shadow-[0_2px_4px_rgba(0,0,0,0.02)]",
+                "hover:z-20 hover:shadow-md active:cursor-grabbing",
+                cardClass
+            )}
+        >
+            <div className={cn("absolute left-0 top-0 bottom-0 w-[4px] rounded-l-lg", barClass)} />
+
+            <div className={cn("pl-2 pr-1 py-0.5 h-full flex flex-col justify-center", minHeight && "flex-row items-center gap-1")}>
+                {!minHeight ? (
+                    <>
+                        <span className={cn(
+                            "text-[10px] font-bold truncate leading-tight",
+                            item.isCompleted ? "text-[var(--color-text-hint)] line-through" : textClass
+                        )}>
+                            {item.title}
+                        </span>
+                        <span className={cn(
+                            "text-[9px] font-mono font-medium mt-0.5",
+                            subTextClass
+                        )}>
+                            {item.startTime} – {item.endTime}
+                        </span>
+                        {item.isDefault && (
+                            <span className="text-[8px] bg-white border border-slate-200/60 text-slate-400 px-1 rounded-sm w-fit mt-0.5 shadow-sm">
+                                Défaut
+                            </span>
+                        )}
+                        {item.subjectTitle && (
+                            <span className="text-[8px] text-[var(--color-text-muted)] uppercase font-bold tracking-wider truncate mt-0.5">
+                                {item.subjectTitle}
+                            </span>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        {isPlan || isTask
+                            ? <BookOpen className={cn("w-2.5 h-2.5 shrink-0", iconColor)} />
+                            : <CalendarDays className={cn("w-2.5 h-2.5 shrink-0", iconColor)} />
+                        }
+                        <span className={cn("text-[9px] font-mono font-semibold truncate", subTextClass)}>{item.startTime}</span>
+                        <span className={cn("text-[9px] font-bold truncate", textClass)}>{item.title}</span>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ─── Component ───────────────────────────────────────────────────────
 
 export function PlanningView() {
@@ -137,12 +472,15 @@ export function PlanningView() {
         deadlines,
     } = usePlanning();
 
-    const { events: agendaEvents, addEvent, removeEvent } = useEvents();
+    const { events: agendaEvents, addEvent, removeEvent, updateEvent } = useEvents();
 
     const [viewMode, setViewMode] = useState<ViewMode>("week");
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingSlot, setEditingSlot] = useState<RecurrentSlot | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+    const [draggedItem, setDraggedItem] = useState<GridItem | null>(null);
+    const [modalData, setModalData] = useState<ModalData | null>(null);
 
     // ── Calendar (monthly) state ──────────────────────────────────────
     const [calMonth, setCalMonth] = useState(() => {
@@ -195,14 +533,155 @@ export function PlanningView() {
         [getEventsForWeek, currentWeekStart],
     );
 
-    // Position calculator
-    const getEventPosition = (startTime: string, duration: number) => {
-        const [h, m] = startTime.split(":").map(Number);
-        const startOffset = (h - 8) * 60 + m;
-        const top = (startOffset / 60) * 4; // 4rem per hour
-        const height = duration * 4;
-        return { top: `${top}rem`, height: `${height}rem` };
-    };
+    const weekDateStrings = useMemo(() => weekDays.map(d => d.date), [weekDays]);
+
+    const dayItems = useMemo((): Map<string, GridItem[]> => {
+        const map = new Map<string, GridItem[]>();
+        weekDateStrings.forEach(ds => map.set(ds, []));
+
+        // 1. Planning recurrent events
+        weekEvents.forEach(pe => {
+            if (map.has(pe.date)) {
+                const raw: GridItem = {
+                    id: `plan-${pe.id}`,
+                    originalId: pe.sourceSlotId || pe.id,
+                    title: pe.title,
+                    date: pe.date,
+                    startTime: pe.startTime,
+                    endTime: addHourHelper(pe.startTime, pe.duration),
+                    isDefault: false,
+                    source: 'plan',
+                    type: pe.type,
+                    top: timeToTop(pe.startTime),
+                    height: durationToHeight(pe.startTime, addHourHelper(pe.startTime, pe.duration)),
+                    left: 0,
+                    width: 1,
+                };
+                map.get(pe.date)!.push(raw);
+            }
+        });
+
+        // 2. Agenda events (including recurring ones)
+        weekDateStrings.forEach(ds => {
+            const dateObj = new Date(ds);
+            const dayOfWeek = dateObj.getDay();
+
+            agendaEvents.forEach(ev => {
+                let shouldInclude = false;
+                if (ev.date === ds) {
+                    shouldInclude = true;
+                } else if (ev.recurrence === 'weekly') {
+                    const evDate = new Date(ev.date);
+                    if (evDate.getDay() === dayOfWeek && dateObj >= evDate) {
+                        shouldInclude = true;
+                    }
+                }
+
+                if (shouldInclude) {
+                    const start = ev.time || '08:00';
+                    const end = ev.endTime || addHourHelper(start);
+                    const raw: GridItem = {
+                        id: `event-${ev.id}-${ds}`, // Unique ID per day for recurring
+                        originalId: ev.id,
+                        title: ev.title,
+                        date: ds,
+                        startTime: start,
+                        endTime: end,
+                        isDefault: !ev.time,
+                        source: 'event',
+                        type: ev.type || 'event',
+                        top: timeToTop(start),
+                        height: durationToHeight(start, end),
+                        left: 0,
+                        width: 1,
+                    };
+                    map.get(ds)!.push(raw);
+                }
+            });
+        });
+
+        map.forEach((items, key) => {
+            map.set(key, layoutOverlaps(items));
+        });
+
+        return map;
+    }, [weekEvents, agendaEvents, weekDateStrings]);
+
+    // Grid interaction handlers
+    const handleGridClick = useCallback((dateStr: string, e: React.MouseEvent<HTMLDivElement>) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const hour = Math.floor(y / HOUR_HEIGHT) + START_HOUR;
+        const clampedHour = Math.max(START_HOUR, Math.min(hour, END_HOUR - 1));
+        const startTime = `${String(clampedHour).padStart(2, '0')}:00`;
+
+        setModalData({
+            mode: 'create',
+            date: dateStr,
+            startTime,
+            endTime: addHourHelper(startTime),
+            title: '',
+            type: 'event',
+        });
+    }, []);
+
+    const handleBlockClick = useCallback((item: GridItem) => {
+        if (item.source === 'plan') {
+            // Can't edit recurrent events via this modal directly
+            return;
+        }
+        setModalData({
+            mode: 'edit',
+            date: item.date,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            title: item.title,
+            type: item.type === 'task' ? 'task' : 'event',
+            editId: item.originalId,
+        });
+    }, []);
+
+    const handleModalSave = useCallback((data: ModalData) => {
+        if (data.mode === 'create') {
+            addEvent({
+                title: data.title,
+                date: data.date,
+                time: data.startTime,
+                endTime: data.endTime,
+                type: data.type,
+            });
+        } else if (data.mode === 'edit' && data.editId) {
+            updateEvent(data.editId, {
+                title: data.title,
+                time: data.startTime,
+                endTime: data.endTime,
+                type: data.type,
+            });
+        }
+        setModalData(null);
+    }, [addEvent, updateEvent]);
+
+    const handleModalDelete = useCallback(() => {
+        if (modalData?.editId) {
+            removeEvent(modalData.editId);
+        }
+        setModalData(null);
+    }, [modalData, removeEvent]);
+
+    // Drag & Drop
+    const handleDragStart = useCallback((e: React.DragEvent, item: GridItem) => {
+        // Only allow dropping regular agenda events
+        if (item.source !== 'event') return;
+        setDraggedItem(item);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.id);
+    }, []);
+
+    const handleDrop = useCallback((targetDateStr: string) => {
+        if (!draggedItem || draggedItem.source !== 'event') return;
+        updateEvent(draggedItem.originalId, { date: targetDateStr });
+        setDraggedItem(null);
+    }, [draggedItem, updateEvent]);
 
     // Handlers
     const handleSaveSlot = (slotData: Omit<RecurrentSlot, "id" | "createdAt"> | RecurrentSlot) => {
@@ -570,67 +1049,76 @@ export function PlanningView() {
                                     ))}
                                 </div>
 
-                                {/* Time grid */}
-                                <div className="relative">
-                                    <div className="grid grid-cols-8">
+                                {/* Time grid — pixel-based with overlap layout */}
+                                <div className="overflow-y-auto max-h-[600px]">
+                                    <div className="flex" style={{ height: `${GRID_HEIGHT}px` }}>
                                         {/* Hours column */}
-                                        <div className="border-r border-[var(--color-border)]">
-                                            {HOURS.map(hour => (
+                                        <div className="w-14 shrink-0 relative border-r border-[var(--color-border)] bg-[var(--color-bg-tertiary)]">
+                                            {HOURS.map(h => (
                                                 <div
-                                                    key={hour}
-                                                    className="flex h-16 items-start border-b border-[var(--color-border)] px-2 py-1"
+                                                    key={h}
+                                                    className="absolute w-full flex items-start justify-end pr-2"
+                                                    style={{ top: `${(h - START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
                                                 >
-                                                    <span className="app-meta">{hour}:00</span>
+                                                    <span className="text-[10px] font-mono text-[var(--color-text-muted)] -mt-[6px]">
+                                                        {String(h).padStart(2, '0')}:00
+                                                    </span>
                                                 </div>
                                             ))}
                                         </div>
 
                                         {/* Day columns */}
-                                        {weekDays.map(day => (
-                                            <div
-                                                key={day.date}
-                                                className="relative border-r border-[var(--color-border)] last:border-r-0"
-                                            >
-                                                {HOURS.map(hour => (
-                                                    <div
-                                                        key={hour}
-                                                        className="h-16 border-b border-[var(--color-border)] transition-colors hover:bg-[var(--color-accent-muted)]"
-                                                    />
-                                                ))}
+                                        {weekDays.map(day => {
+                                            const items = dayItems.get(day.date) || [];
+                                            return (
+                                                <div
+                                                    key={day.date}
+                                                    className={`flex-1 relative border-r border-[var(--color-border)] last:border-r-0 ${
+                                                        day.isToday ? 'bg-[var(--color-accent-muted)]/10' : 'bg-[var(--color-bg-surface)]'
+                                                    }`}
+                                                    onClick={e => handleGridClick(day.date, e)}
+                                                    onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                                                    onDrop={e => { e.preventDefault(); handleDrop(day.date); }}
+                                                >
+                                                    {/* Hour grid lines */}
+                                                    {HOURS.map(h => (
+                                                        <div
+                                                            key={h}
+                                                            className="absolute w-full border-b border-[var(--color-border)]/50 hover:bg-[var(--color-accent-muted)]/20 transition-colors cursor-pointer"
+                                                            style={{ top: `${(h - START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
+                                                        />
+                                                    ))}
 
-                                                {/* Events */}
-                                                {weekEvents
-                                                    .filter(e => e.date === day.date)
-                                                    .map(event => {
-                                                        const pos = getEventPosition(event.startTime, event.duration);
-                                                        const colors = TYPE_COLORS[event.type];
+                                                    {/* Current time indicator */}
+                                                    {day.isToday && (() => {
+                                                        const now = new Date();
+                                                        const top = ((now.getHours() + now.getMinutes() / 60) - START_HOUR) * HOUR_HEIGHT;
+                                                        if (top < 0 || top > GRID_HEIGHT) return null;
                                                         return (
                                                             <div
-                                                                key={event.id}
-                                                                className={`absolute left-1 right-1 cursor-pointer rounded-lg border-l-[3px] p-2 transition-shadow hover:shadow-md ${colors.card}`}
-                                                                style={{
-                                                                    top: pos.top,
-                                                                    height: pos.height,
-                                                                }}
+                                                                className="absolute left-0 right-0 z-30 pointer-events-none"
+                                                                style={{ top: `${top}px` }}
                                                             >
-                                                                <div className="text-xs font-medium leading-tight text-[var(--color-text-primary)]">
-                                                                    {event.title}
+                                                                <div className="relative">
+                                                                    <div className="absolute -left-1 -top-[4px] w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]" />
+                                                                    <div className="h-[2px] bg-red-500/60 w-full" />
                                                                 </div>
-                                                                <div className="mt-1 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-                                                                    <Clock className="h-3 w-3" />
-                                                                    {event.startTime} · {RecurrentSlotUtils.formatDuration(event.duration)}
-                                                                </div>
-                                                                {event.isRecurrent && (
-                                                                    <div className="mt-0.5 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-                                                                        <Repeat className="h-3 w-3" />
-                                                                        {event.recurrence}
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         );
-                                                    })}
-                                            </div>
-                                        ))}
+                                                    })()}
+
+                                                    {/* Fused event blocks (planning + agenda) with overlap layout */}
+                                                    {items.map(item => (
+                                                        <GridBlock
+                                                            key={item.id}
+                                                            item={item}
+                                                            onClick={handleBlockClick}
+                                                            onDragStart={handleDragStart}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
@@ -832,6 +1320,16 @@ export function PlanningView() {
                             ))}
                     </div>
                 </div>
+            )}
+
+            {/* ── Dialog: Event Modal (Agenda) ────────────────────── */}
+            {modalData && (
+                <EventModal
+                    data={modalData}
+                    onClose={() => setModalData(null)}
+                    onSave={handleModalSave}
+                    onDelete={handleModalDelete}
+                />
             )}
 
             {/* ── Dialog: Recurrent Slot ──────────────────────────── */}
