@@ -259,9 +259,9 @@ function getTargetSubjects(strategy: ActiveStrategy, subjects: Subject[]): Subje
         case 'preparation':
             return subjects.filter(s => strategy.preparationSubjectIds.includes(s.id));
         case 'rush':
-            return subjects.filter(s => s.id === strategy.rushSubjectId);
+            return subjects.filter(s => (strategy.rushSubjectIds ?? []).includes(s.id));
         case 'vacances':
-            return subjects.filter(s => s.id === strategy.vacancesSubjectId);
+            return subjects.filter(s => (strategy.vacancesSubjectIds ?? []).includes(s.id));
         default:
             return [];
     }

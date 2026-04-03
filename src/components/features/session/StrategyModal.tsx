@@ -21,9 +21,9 @@ export const StrategyModal = ({ open, onOpenChange }: StrategyModalProps) => {
     const [mode, setMode] = useState<StrategyMode | null>(null);
     const [preparationMatieres, setPreparationMatieres] = useState<string[]>([]);
     const [preparationDate, setPreparationDate] = useState('');
-    const [rushMatiere, setRushMatiere] = useState('');
+    const [rushMatieres, setRushMatieres] = useState<string[]>([]);
     const [vacancesObjectif, setVacancesObjectif] = useState<VacationObjective | null>(null);
-    const [vacancesMatiere, setVacancesMatiere] = useState('');
+    const [vacancesMatieres, setVacancesMatieres] = useState<string[]>([]);
     const [vacancesDuree, setVacancesDuree] = useState('');
     const [vacancesPerimetre, setVacancesPerimetre] = useState<LearningScope | null>(null);
 
@@ -35,18 +35,18 @@ export const StrategyModal = ({ open, onOpenChange }: StrategyModalProps) => {
             setMode(strategy.mode ?? null);
             setPreparationMatieres(Array.isArray(strategy.preparationSubjectIds) ? strategy.preparationSubjectIds : []);
             setPreparationDate(strategy.preparationDeadline ?? '');
-            setRushMatiere(strategy.rushSubjectId ?? '');
+            setRushMatieres(Array.isArray(strategy.rushSubjectIds) ? strategy.rushSubjectIds : []);
             setVacancesObjectif(strategy.vacancesObjectif ?? null);
-            setVacancesMatiere(strategy.vacancesSubjectId ?? '');
+            setVacancesMatieres(Array.isArray(strategy.vacancesSubjectIds) ? strategy.vacancesSubjectIds : []);
             setVacancesDuree(strategy.vacancesDuree ?? '');
             setVacancesPerimetre(strategy.vacancesPerimetre ?? null);
         } else if (open && !strategy) {
             setMode(null);
             setPreparationMatieres([]);
             setPreparationDate('');
-            setRushMatiere('');
+            setRushMatieres([]);
             setVacancesObjectif(null);
-            setVacancesMatiere('');
+            setVacancesMatieres([]);
             setVacancesDuree('');
             setVacancesPerimetre(null);
         }
@@ -58,6 +58,18 @@ export const StrategyModal = ({ open, onOpenChange }: StrategyModalProps) => {
         );
     };
 
+    const toggleRushMatiere = (id: string) => {
+        setRushMatieres(prev =>
+            prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+        );
+    };
+
+    const toggleVacancesMatiere = (id: string) => {
+        setVacancesMatieres(prev =>
+            prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+        );
+    };
+
     // Validation
     const isFormValid = (): boolean => {
         if (!mode) return false;
@@ -65,9 +77,9 @@ export const StrategyModal = ({ open, onOpenChange }: StrategyModalProps) => {
             case 'preparation':
                 return preparationMatieres.length > 0 && preparationDate !== '';
             case 'rush':
-                return rushMatiere !== '';
+                return rushMatieres.length > 0;
             case 'vacances':
-                if (!vacancesObjectif || !vacancesMatiere || !vacancesDuree) return false;
+                if (!vacancesObjectif || vacancesMatieres.length === 0 || !vacancesDuree) return false;
                 if (vacancesObjectif === 'apprentissage' && !vacancesPerimetre) return false;
                 return true;
         }
@@ -98,9 +110,9 @@ export const StrategyModal = ({ open, onOpenChange }: StrategyModalProps) => {
             mode,
             preparationSubjectIds: mode === 'preparation' ? preparationMatieres : [],
             preparationDeadline: mode === 'preparation' && preparationDate ? preparationDate : null,
-            rushSubjectId: mode === 'rush' && rushMatiere ? rushMatiere : null,
+            rushSubjectIds: mode === 'rush' ? rushMatieres : [],
             vacancesObjectif: mode === 'vacances' ? vacancesObjectif : null,
-            vacancesSubjectId: mode === 'vacances' && vacancesMatiere ? vacancesMatiere : null,
+            vacancesSubjectIds: mode === 'vacances' ? vacancesMatieres : [],
             vacancesDuree: mode === 'vacances' && vacancesDuree ? vacancesDuree : null,
             vacancesPerimetre: mode === 'vacances' && vacancesObjectif === 'apprentissage' ? vacancesPerimetre : null,
             createdAt: Date.now(),
@@ -240,18 +252,32 @@ export const StrategyModal = ({ open, onOpenChange }: StrategyModalProps) => {
                                     <div className="mt-4 space-y-3 pl-3 border-l-2 border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
                                         <div>
                                             <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                Matière à travailler <span className="text-[var(--color-danger)]">*</span>
+                                                Matières à travailler <span className="text-[var(--color-danger)]">*</span>
                                             </label>
-                                            <select
-                                                value={rushMatiere}
-                                                onChange={e => setRushMatiere(e.target.value)}
-                                                className="app-input text-xs"
-                                            >
-                                                <option value="">Sélectionnez une matière</option>
+                                            <div className="flex flex-wrap gap-1.5">
                                                 {subjects.map(s => (
-                                                    <option key={s.id} value={s.id}>{s.title}</option>
+                                                    <button key={s.id}
+                                                        onClick={() => toggleRushMatiere(s.id)}
+                                                        className={cn(
+                                                            "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
+                                                            rushMatieres.includes(s.id)
+                                                                ? "app-btn-primary text-white"
+                                                                : "app-btn-secondary"
+                                                        )}>
+                                                        {s.title}
+                                                    </button>
                                                 ))}
-                                            </select>
+                                                {subjects.length === 0 && (
+                                                    <p className="text-[10px] text-[var(--color-text-hint)]">
+                                                        Aucune matière — ajoutez-en dans la section Matières
+                                                    </p>
+                                                )}
+                                            </div>
+                                            {rushMatieres.length > 0 && (
+                                                <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
+                                                    {rushMatieres.length} matière{rushMatieres.length > 1 ? 's' : ''} sélectionnée{rushMatieres.length > 1 ? 's' : ''}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -311,16 +337,32 @@ export const StrategyModal = ({ open, onOpenChange }: StrategyModalProps) => {
                                             <div className="space-y-3 pl-3 border-l-2 border-[var(--color-border)]">
                                                 <div>
                                                     <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                        Matière à réviser <span className="text-[var(--color-danger)]">*</span>
+                                                        Matières à réviser <span className="text-[var(--color-danger)]">*</span>
                                                     </label>
-                                                    <select value={vacancesMatiere}
-                                                        onChange={e => setVacancesMatiere(e.target.value)}
-                                                        className="app-input text-xs">
-                                                        <option value="">Sélectionnez une matière</option>
+                                                    <div className="flex flex-wrap gap-1.5">
                                                         {subjects.map(s => (
-                                                            <option key={s.id} value={s.id}>{s.title}</option>
+                                                            <button key={s.id}
+                                                                onClick={() => toggleVacancesMatiere(s.id)}
+                                                                className={cn(
+                                                                    "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
+                                                                    vacancesMatieres.includes(s.id)
+                                                                        ? "app-btn-primary text-white"
+                                                                        : "app-btn-secondary"
+                                                                )}>
+                                                                {s.title}
+                                                            </button>
                                                         ))}
-                                                    </select>
+                                                        {subjects.length === 0 && (
+                                                            <p className="text-[10px] text-[var(--color-text-hint)]">
+                                                                Aucune matière — ajoutez-en dans la section Matières
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    {vacancesMatieres.length > 0 && (
+                                                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
+                                                            {vacancesMatieres.length} matière{vacancesMatieres.length > 1 ? 's' : ''} sélectionnée{vacancesMatieres.length > 1 ? 's' : ''}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
@@ -343,16 +385,32 @@ export const StrategyModal = ({ open, onOpenChange }: StrategyModalProps) => {
                                             <div className="space-y-3 pl-3 border-l-2 border-[var(--color-border)]">
                                                 <div>
                                                     <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                        Matière à travailler <span className="text-[var(--color-danger)]">*</span>
+                                                        Matières à travailler <span className="text-[var(--color-danger)]">*</span>
                                                     </label>
-                                                    <select value={vacancesMatiere}
-                                                        onChange={e => setVacancesMatiere(e.target.value)}
-                                                        className="app-input text-xs">
-                                                        <option value="">Sélectionnez une matière</option>
+                                                    <div className="flex flex-wrap gap-1.5">
                                                         {subjects.map(s => (
-                                                            <option key={s.id} value={s.id}>{s.title}</option>
+                                                            <button key={s.id}
+                                                                onClick={() => toggleVacancesMatiere(s.id)}
+                                                                className={cn(
+                                                                    "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
+                                                                    vacancesMatieres.includes(s.id)
+                                                                        ? "app-btn-primary text-white"
+                                                                        : "app-btn-secondary"
+                                                                )}>
+                                                                {s.title}
+                                                            </button>
                                                         ))}
-                                                    </select>
+                                                        {subjects.length === 0 && (
+                                                            <p className="text-[10px] text-[var(--color-text-hint)]">
+                                                                Aucune matière — ajoutez-en dans la section Matières
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    {vacancesMatieres.length > 0 && (
+                                                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
+                                                            {vacancesMatieres.length} matière{vacancesMatieres.length > 1 ? 's' : ''} sélectionnée{vacancesMatieres.length > 1 ? 's' : ''}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-2 block">

@@ -17,11 +17,11 @@ export interface ActiveStrategy {
     preparationDeadline: string | null;     // ISO date
 
     // --- Rush fields ---
-    rushSubjectId: string | null;           // single select
+    rushSubjectIds: string[];               // multi-select
 
     // --- Vacances fields ---
     vacancesObjectif: VacationObjective | null;
-    vacancesSubjectId: string | null;
+    vacancesSubjectIds: string[];           // multi-select
     vacancesDuree: string | null;           // e.g. '1w', '2w', '1m', '2m'
     vacancesPerimetre: LearningScope | null;
 
@@ -44,9 +44,9 @@ export function createEmptyStrategy(): ActiveStrategy {
         mode: 'preparation',
         preparationSubjectIds: [],
         preparationDeadline: null,
-        rushSubjectId: null,
+        rushSubjectIds: [],
         vacancesObjectif: null,
-        vacancesSubjectId: null,
+        vacancesSubjectIds: [],
         vacancesDuree: null,
         vacancesPerimetre: null,
         createdAt: Date.now(),
