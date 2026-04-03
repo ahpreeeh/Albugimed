@@ -24,7 +24,7 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────
 
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 8); // 8h → 21h
+const HOURS = Array.from({ length: 16 }, (_, i) => i + 8); // 8h → 23h
 
 const TYPE_COLORS: Record<PlanningEventType, { card: string; dot: string; badge: string }> = {
     revision: {
@@ -137,7 +137,7 @@ export function PlanningView() {
         deadlines,
     } = usePlanning();
 
-    const { events: agendaEvents, addEvent } = useEvents();
+    const { events: agendaEvents, addEvent, removeEvent } = useEvents();
 
     const [viewMode, setViewMode] = useState<ViewMode>("week");
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -472,7 +472,7 @@ export function PlanningView() {
                                         {eventsForMonth
                                             .sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""))
                                             .map(ev => (
-                                                <div key={ev.id} className="flex items-start gap-2 py-2 border-b border-[var(--color-border)] last:border-0">
+                                                <div key={ev.id} className="group flex items-start gap-2 py-2 border-b border-[var(--color-border)] last:border-0">
                                                     <div className="mt-1 h-1.5 w-1.5 rounded-full bg-[var(--color-accent)] shrink-0" />
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-[12px] font-medium text-[var(--color-text-primary)] truncate">{ev.title}</p>
@@ -480,6 +480,13 @@ export function PlanningView() {
                                                             {ev.date}{ev.time ? ` · ${ev.time}` : ""}
                                                         </p>
                                                     </div>
+                                                    <button
+                                                        onClick={() => removeEvent(ev.id)}
+                                                        className="mt-0.5 shrink-0 text-[var(--color-text-hint)] opacity-0 group-hover:opacity-100 hover:text-[var(--color-danger)] transition-all"
+                                                        title="Supprimer"
+                                                    >
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </button>
                                                 </div>
                                             ))}
                                     </div>
