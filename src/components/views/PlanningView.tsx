@@ -750,15 +750,49 @@ export function PlanningView() {
         return `${months[calMonth.month]} ${calMonth.year}`;
     }, [calMonth]);
 
+    // Unified calendar item for monthly view (agenda events + recurrent slots)
+    type CalendarItem = { id: string; title: string; date: string; time?: string; source: 'event' | 'slot' };
+
+    // Expand recurrent slots for a given date
+    const getRecurrentSlotsForDate = useCallback((dateStr: string): CalendarItem[] => {
+        const d = new Date(dateStr + 'T00:00:00');
+        const jsDay = d.getDay(); // 0=Sun, 1=Mon...
+        return recurrentSlots
+            .filter(slot => slot.isActive && slot.daysOfWeek.includes(jsDay))
+            .map(slot => ({
+                id: `slot-${slot.id}-${dateStr}`,
+                title: slot.title,
+                date: dateStr,
+                time: slot.startTime,
+                source: 'slot' as const,
+            }));
+    }, [recurrentSlots]);
+
     const eventsForMonth = useMemo(() => {
         const pad = (n: number) => String(n).padStart(2, "0");
         const prefix = `${calMonth.year}-${pad(calMonth.month + 1)}-`;
-        return agendaEvents.filter(e => e.date.startsWith(prefix));
-    }, [agendaEvents, calMonth]);
+        const agendaItems: CalendarItem[] = agendaEvents
+            .filter(e => e.date.startsWith(prefix))
+            .map(e => ({ id: e.id, title: e.title, date: e.date, time: e.time, source: 'event' as const }));
 
-    const eventsForDate = useCallback((dateStr: string) =>
-        agendaEvents.filter(e => e.date === dateStr),
-    [agendaEvents]);
+        // Expand recurrent slots for all days of the month
+        const { year, month } = calMonth;
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        const slotItems: CalendarItem[] = [];
+        for (let d = 1; d <= lastDay; d++) {
+            const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
+            slotItems.push(...getRecurrentSlotsForDate(dateStr));
+        }
+
+        return [...agendaItems, ...slotItems];
+    }, [agendaEvents, calMonth, getRecurrentSlotsForDate]);
+
+    const eventsForDate = useCallback((dateStr: string): CalendarItem[] => {
+        const agendaItems: CalendarItem[] = agendaEvents
+            .filter(e => e.date === dateStr)
+            .map(e => ({ id: e.id, title: e.title, date: e.date, time: e.time, source: 'event' as const }));
+        return [...agendaItems, ...getRecurrentSlotsForDate(dateStr)];
+    }, [agendaEvents, getRecurrentSlotsForDate]);
 
     return (
         <div className="mx-auto max-w-[1560px] space-y-6">
@@ -909,8 +943,8 @@ export function PlanningView() {
                                                             <div key={ev.id}
                                                                 className="truncate rounded px-1 py-0.5 text-[9px] font-medium"
                                                                 style={{
-                                                                    background: "var(--color-accent-muted)",
-                                                                    color: "var(--color-accent)",
+                                                                    background: ev.source === 'slot' ? "var(--color-secondary-muted)" : "var(--color-accent-muted)",
+                                                                    color: ev.source === 'slot' ? "var(--color-secondary)" : "var(--color-accent)",
                                                                 }}>
                                                                 {ev.time && <span className="mr-1 opacity-70">{ev.time}</span>}
                                                                 {ev.title}
@@ -934,7 +968,7 @@ export function PlanningView() {
                         <div className="w-full lg:w-72 lg:shrink-0 space-y-3">
                             <div className="app-card p-4">
                                 <h3 className="text-[12px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
-                                    {monthLabel} — {eventsForMonth.length} événement{eventsForMonth.length !== 1 ? "s" : ""}
+                                    {monthLabel} — {eventsForMonth.length} élément{eventsForMonth.length !== 1 ? "s" : ""}
                                 </h3>
                                 {eventsForMonth.length === 0 ? (
                                     <div className="py-6 text-center">
@@ -952,20 +986,25 @@ export function PlanningView() {
                                             .sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""))
                                             .map(ev => (
                                                 <div key={ev.id} className="group flex items-start gap-2 py-2 border-b border-[var(--color-border)] last:border-0">
-                                                    <div className="mt-1 h-1.5 w-1.5 rounded-full bg-[var(--color-accent)] shrink-0" />
+                                                    <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${ev.source === 'slot' ? 'bg-[var(--color-secondary)]' : 'bg-[var(--color-accent)]'}`} />
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-[12px] font-medium text-[var(--color-text-primary)] truncate">{ev.title}</p>
+                                                        <div className="flex items-center gap-1">
+                                                            {ev.source === 'slot' && <Repeat className="h-2.5 w-2.5 text-[var(--color-secondary)] shrink-0" />}
+                                                            <p className="text-[12px] font-medium text-[var(--color-text-primary)] truncate">{ev.title}</p>
+                                                        </div>
                                                         <p className="text-[10px] text-[var(--color-text-muted)]">
                                                             {ev.date}{ev.time ? ` · ${ev.time}` : ""}
                                                         </p>
                                                     </div>
-                                                    <button
-                                                        onClick={() => removeEvent(ev.id)}
-                                                        className="mt-0.5 shrink-0 text-[var(--color-text-hint)] opacity-0 group-hover:opacity-100 hover:text-[var(--color-danger)] transition-all"
-                                                        title="Supprimer"
-                                                    >
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </button>
+                                                    {ev.source === 'event' && (
+                                                        <button
+                                                            onClick={() => removeEvent(ev.id)}
+                                                            className="mt-0.5 shrink-0 text-[var(--color-text-hint)] opacity-0 group-hover:opacity-100 hover:text-[var(--color-danger)] transition-all"
+                                                            title="Supprimer"
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             ))}
                                     </div>

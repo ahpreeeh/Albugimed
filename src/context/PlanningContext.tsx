@@ -133,7 +133,6 @@ export const PlanningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             for (const slot of savedSlots) {
                 if (!slot.isActive) continue;
                 if (!slot.daysOfWeek.includes(jsDayNum)) continue;
-                if (slot.createdAt > dateStr) continue;
                 result.push({
                     id: `${slot.id}-${dateStr}`,
                     title: slot.title,
