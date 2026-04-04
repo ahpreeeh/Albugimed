@@ -114,8 +114,14 @@ export function WeeklyTracker() {
                          setWeeklyCourseGoal(weeksLeft < 1 ? pendingChapters : Math.ceil(pendingChapters / weeksLeft));
                      }
                  } else {
-                     // No deadline (rush mode) — show total pending as goal
-                     setWeeklyCourseGoal(pendingChapters);
+                     // No deadline (rush) — estimate weekly pace from strategy age
+                     const stratAge = strategy.createdAt
+                         ? (Date.now() - strategy.createdAt) / (1000 * 60 * 60 * 24 * 7)
+                         : 0;
+                     const weeksElapsed = Math.max(stratAge, 1);
+                     const doneCount = Math.max(0, totalChapters - pendingChapters);
+                     const weeklyPace = doneCount > 0 ? Math.ceil(doneCount / weeksElapsed) : Math.ceil(totalChapters / 4);
+                     setWeeklyCourseGoal(weeklyPace);
                  }
              } else {
                  setWeeklyCourseGoal(0);
