@@ -8,10 +8,11 @@ import {
 import { useStrategy } from '@/context/StrategyContext';
 import { useSessionEngine } from '@/context/SessionEngineContext';
 import { StrategyModal } from './StrategyModal';
+import { useCloudStorage } from '@/hooks/useCloudStorage';
 import type { DayLoad } from '@/types/strategy';
 import type { DifficultyRating } from '@/types/session';
 import { reasonLabel, taskTypeLabel, reasonBadgeClass, difficultyColor } from '@/types/session';
-import { cn } from '@/lib/utils';
+import { cn, toLocalISOString } from '@/lib/utils';
 
 // ─── Timer hook (with pause support) ─────────────────────────────────
 function useTimer(isRunning: boolean, isPaused: boolean): number {
@@ -128,7 +129,7 @@ export const SessionWidget = () => {
     // Reset pause when task changes
     useEffect(() => { setIsPaused(false); }, [currentTask?.id]);
 
-    const TIMING_KEY = 'med-pilot-session-timing';
+    const { data: timingEntries, saveWith: saveTimingEntries } = useCloudStorage<any[]>('med-pilot-session-timing', []);
 
     const handleStart = useCallback(() => {
         startedAtRef.current = new Date().toISOString();
@@ -142,20 +143,17 @@ export const SessionWidget = () => {
 
     const saveTimingEntry = useCallback((durationMs: number) => {
         if (!currentTask || !startedAtRef.current) return;
-        try {
-            const existing = JSON.parse(localStorage.getItem(TIMING_KEY) || '[]');
-            existing.push({
-                taskId: currentTask.id,
-                chapterTitle: currentTask.chapterTitle,
-                subjectTitle: currentTask.subjectTitle,
-                startedAt: startedAtRef.current,
-                durationMs,
-                date: new Date().toISOString().slice(0, 10),
-            });
-            localStorage.setItem(TIMING_KEY, JSON.stringify(existing));
-        } catch { /* ignore */ }
+        const entry = {
+            taskId: currentTask.id,
+            chapterTitle: currentTask.chapterTitle,
+            subjectTitle: currentTask.subjectTitle,
+            startedAt: startedAtRef.current,
+            durationMs,
+            date: toLocalISOString(new Date()),
+        };
+        saveTimingEntries(prev => [...prev, entry]);
         startedAtRef.current = null;
-    }, [currentTask]);
+    }, [currentTask, saveTimingEntries]);
 
     // Progress bar
     const progress = useMemo(() => {

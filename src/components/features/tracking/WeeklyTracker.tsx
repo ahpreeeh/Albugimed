@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useStrategy } from "@/context/StrategyContext";
 import { useSubjects } from "@/context/SubjectContext";
+import { useCloudStorage } from "@/hooks/useCloudStorage";
 import { cn } from "@/lib/utils";
 
 type WeekDay = {
@@ -48,16 +49,12 @@ export function WeeklyTracker() {
   const [weeklyCourseGoal, setWeeklyCourseGoal] = useState(0);
   const { strategy } = useStrategy();
   const { subjects } = useSubjects();
+  const { data: timings } = useCloudStorage<any[]>('med-pilot-session-timing', []);
 
   useEffect(() => {
      const updateData = () => {
          const todayStr = isoDateString(new Date());
          const weekDates = getWeekRange(currentDate);
-
-         let timings: any[] = [];
-         try {
-           timings = JSON.parse(localStorage.getItem('med-pilot-session-timing') || '[]');
-         } catch { /* empty */ }
 
          const newWeekData = weekDates.map(d => {
              const dateStr = isoDateString(d);
@@ -79,26 +76,46 @@ export function WeeklyTracker() {
          setWeekData(prev => JSON.stringify(prev) === JSON.stringify(newWeekData) ? prev : newWeekData);
 
          // --- Calculate dynamically the goal ---
-         if (strategy?.mode === 'preparation' && strategy.preparationDeadline) {
-             const targetSubjects = subjects.filter(s => strategy.preparationSubjectIds?.includes(s.id));
+         if (strategy) {
+             // Determine target subjects based on strategy mode
+             let targetSubjectIds: string[] = [];
+             let deadline: Date | null = null;
+
+             if (strategy.mode === 'preparation') {
+                 targetSubjectIds = strategy.preparationSubjectIds ?? [];
+                 deadline = strategy.preparationDeadline ? new Date(strategy.preparationDeadline) : null;
+             } else if (strategy.mode === 'rush') {
+                 targetSubjectIds = strategy.rushSubjectIds ?? [];
+             } else if (strategy.mode === 'vacances') {
+                 targetSubjectIds = strategy.vacancesSubjectIds ?? [];
+                 // Parse vacancesDuree into a deadline
+                 if (strategy.vacancesDuree && strategy.createdAt) {
+                     const dMap: Record<string, number> = { '1w': 7, '2w': 14, '3w': 21, '1m': 30, '6w': 42, '2m': 60, '3m': 90 };
+                     const days = dMap[strategy.vacancesDuree] || 0;
+                     if (days > 0) {
+                         deadline = new Date(strategy.createdAt + days * 86400000);
+                     }
+                 }
+             }
+
+             const targetSubjects = subjects.filter(s => targetSubjectIds.includes(s.id));
              const totalChapters = targetSubjects.reduce((sum, s) => sum + s.chapters.length, 0);
 
              if (totalChapters > 0) {
-                 const deadline = new Date(strategy.preparationDeadline);
-                 const now = new Date();
-                 const msDiff = deadline.getTime() - now.getTime();
                  const totalTimingsCount = timings.length;
                  const pendingChapters = Math.max(0, totalChapters - totalTimingsCount);
 
-                 if (msDiff <= 0) {
-                     setWeeklyCourseGoal(pendingChapters);
-                 } else {
-                     const weeksLeft = msDiff / (1000 * 60 * 60 * 24 * 7);
-                     if (weeksLeft < 1) {
+                 if (deadline) {
+                     const msDiff = deadline.getTime() - new Date().getTime();
+                     if (msDiff <= 0) {
                          setWeeklyCourseGoal(pendingChapters);
                      } else {
-                         setWeeklyCourseGoal(Math.ceil(pendingChapters / weeksLeft));
+                         const weeksLeft = msDiff / (1000 * 60 * 60 * 24 * 7);
+                         setWeeklyCourseGoal(weeksLeft < 1 ? pendingChapters : Math.ceil(pendingChapters / weeksLeft));
                      }
+                 } else {
+                     // No deadline (rush mode) — show total pending as goal
+                     setWeeklyCourseGoal(pendingChapters);
                  }
              } else {
                  setWeeklyCourseGoal(0);
@@ -109,9 +126,7 @@ export function WeeklyTracker() {
      };
 
      updateData();
-     const interval = setInterval(updateData, 5000); // Auto-refresh to sync with SessionWidget
-     return () => clearInterval(interval);
-  }, [currentDate, strategy, subjects]);
+  }, [currentDate, strategy, subjects, timings]);
 
   const prevWeek = () => {
       const d = new Date(currentDate);
