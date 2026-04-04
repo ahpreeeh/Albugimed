@@ -692,9 +692,11 @@ const UpcomingDeadlines = () => {
 
 // ——— Main ———
 export const HomeView = () => {
+    const [isMounted, setIsMounted] = useState(false);
     const [timeData, setTimeData] = useState({ greeting: 'Bonjour', dateLabel: '' });
 
     useEffect(() => {
+        setIsMounted(true);
         const h = new Date().getHours();
         let greeting = 'Bonjour';
         if (h >= 12 && h < 18) greeting = 'Bon après-midi';
@@ -703,6 +705,26 @@ export const HomeView = () => {
         const dateLabel = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
         setTimeData({ greeting, dateLabel });
     }, []);
+
+    if (!isMounted) {
+        return (
+            <div className="mx-auto max-w-[1560px]">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <span className="app-icon-box">
+                            <LayoutGrid className="h-4 w-4" />
+                        </span>
+                        <div>
+                            <h1 className="text-[28px] font-semibold leading-none text-[var(--color-text-primary)]">
+                                Bonjour
+                            </h1>
+                            <p className="app-meta mt-1">&nbsp;</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="mx-auto max-w-[1560px]">
