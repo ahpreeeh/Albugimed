@@ -57,7 +57,7 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
             const modelInstance = genAI.getGenerativeModel({
-                model: modelId || "gemini-2.5-flash",
+                model: modelId || "gemini-2.0-flash",
                 systemInstruction: ANKI_SYSTEM_PROMPT,
             });
 
