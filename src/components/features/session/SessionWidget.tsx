@@ -8,7 +8,7 @@ import {
 import { useStrategy } from '@/context/StrategyContext';
 import { useSessionEngine } from '@/context/SessionEngineContext';
 import { StrategyModal } from './StrategyModal';
-import { useCloudStorage } from '@/hooks/useCloudStorage';
+import { useSessionTimingStorage } from '@/hooks/useSessionTimingStorage';
 import type { DayLoad } from '@/types/strategy';
 import type { DifficultyRating } from '@/types/session';
 import { reasonLabel, taskTypeLabel, reasonBadgeClass, difficultyColor } from '@/types/session';
@@ -129,7 +129,7 @@ export const SessionWidget = () => {
     // Reset pause when task changes
     useEffect(() => { setIsPaused(false); }, [currentTask?.id]);
 
-    const { data: timingEntries, saveWith: saveTimingEntries } = useCloudStorage<any[]>('med-pilot-session-timing', []);
+    const { saveWith: saveTimingEntries } = useSessionTimingStorage();
 
     const handleStart = useCallback(() => {
         startedAtRef.current = new Date().toISOString();
@@ -143,13 +143,20 @@ export const SessionWidget = () => {
 
     const saveTimingEntry = useCallback((durationMs: number) => {
         if (!currentTask || !startedAtRef.current) return;
+        const completedAt = new Date().toISOString();
         const entry = {
             taskId: currentTask.id,
+            subjectId: currentTask.subjectId,
+            chapterId: currentTask.chapterId,
             chapterTitle: currentTask.chapterTitle,
             subjectTitle: currentTask.subjectTitle,
+            taskType: currentTask.taskType,
+            annaleLevel: currentTask.annaleLevel,
+            reason: currentTask.reason,
             startedAt: startedAtRef.current,
+            completedAt,
             durationMs,
-            date: toLocalISOString(new Date()),
+            date: toLocalISOString(new Date(completedAt)),
         };
         saveTimingEntries(prev => [...prev, entry]);
         startedAtRef.current = null;
