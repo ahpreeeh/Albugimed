@@ -9,7 +9,7 @@ import type { DayLoad } from '@/types/strategy';
 import type {
     DailySession, SessionTask, SessionReason, DifficultyRating,
 } from '@/types/session';
-import { toLocalISOString } from '@/lib/utils';
+import { toLocalISOString } from '@/shared/lib/cn';
 import { createClient } from '@/utils/supabase/client';
 
 // ─── Storage ─────────────────────────────────────────────────────────

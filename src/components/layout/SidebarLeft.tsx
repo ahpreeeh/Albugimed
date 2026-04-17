@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useView, ViewType } from "@/context/ViewContext";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import {
     BookOpen,
     Calendar,

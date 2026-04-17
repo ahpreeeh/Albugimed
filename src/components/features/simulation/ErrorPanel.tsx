@@ -6,7 +6,7 @@ import {
     AlertCircle, ChevronDown, ChevronRight, Trash2, Pencil, Plus, X, Check,
     Download,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/cn';
 import type { ErrorEntry } from '@/types';
 import { validateErrorBank } from '@/lib/validators';
 

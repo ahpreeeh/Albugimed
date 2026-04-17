@@ -24,7 +24,7 @@ import {
     Save,
     X,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/cn";
 
 // ─── Constants ───────────────────────────────────────────────────────
 

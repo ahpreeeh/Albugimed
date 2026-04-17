@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useView, ViewType } from "@/context/ViewContext";
 import { StrategyModal } from "@/components/features/session/StrategyModal";
 import { ThemeSettingsPanel } from "@/components/layout/ThemeSettingsPanel";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import {
     Stethoscope,
     LayoutGrid,

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useCloudStorage } from "@/hooks/useCloudStorage";
 import { CheckCircle2, Download, Sparkles, ArrowLeft } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import type { ErrorEntry, Flashcard } from "@/types";
 import { useGeminiConfig } from "@/hooks/useGeminiConfig";
 

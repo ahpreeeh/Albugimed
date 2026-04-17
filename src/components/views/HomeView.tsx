@@ -14,7 +14,7 @@ import { useEvents } from "@/context/EventContext";
 import type { AgendaEvent } from "@/context/EventContext";
 import { useView } from "@/context/ViewContext";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import type { ErrorEntry } from "@/types";
 import type { ActiveStrategy } from "@/types/strategy";
 import { SessionWidget } from "@/components/features/session/SessionWidget";

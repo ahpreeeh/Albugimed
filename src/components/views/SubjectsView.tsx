@@ -6,7 +6,7 @@ import { useSubjects, Subject } from "@/context/SubjectContext";
 import { SubjectCard } from "@/components/features/subjects/SubjectCard";
 import { AddSubjectModal } from "@/components/features/subjects/AddSubjectModal";
 import { SubjectDetailModal } from "@/components/features/subjects/SubjectDetailModal";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/cn";
 
 type FilterMode = "all" | "not-started" | "in-progress" | "exam-soon";
 

@@ -7,7 +7,7 @@ import {
 import {
     Subject, useSubjects, getIconComponent,
 } from "@/context/SubjectContext";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/cn";
 
 interface Props {
     subject: Subject;

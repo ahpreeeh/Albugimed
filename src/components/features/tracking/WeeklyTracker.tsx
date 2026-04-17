@@ -5,7 +5,7 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSubjects } from "@/context/SubjectContext";
 import { useStrategy } from "@/context/StrategyContext";
 import { useSessionTimingStorage } from "@/hooks/useSessionTimingStorage";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import {
   calculateWeeklyTrackerSnapshot,
   getWeekDateLabel,

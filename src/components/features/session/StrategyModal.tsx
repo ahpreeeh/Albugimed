@@ -6,7 +6,7 @@ import { useSubjects } from '@/context/SubjectContext';
 import { useStrategy } from '@/context/StrategyContext';
 import type { StrategyMode, VacationObjective, LearningScope, ActiveStrategy } from '@/types/strategy';
 import { DUREES, createEmptyStrategy } from '@/types/strategy';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/cn';
 
 interface StrategyModalProps {
     open: boolean;

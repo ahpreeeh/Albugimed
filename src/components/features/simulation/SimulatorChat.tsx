@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, RefreshCw, Bot, User, AlertTriangle, Settings, Maximize2, Minimize2, Lock } from 'lucide-react';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/cn';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage, ErrorEntry } from '@/types';
 import { validateChatMessages, validateErrorBank } from '@/lib/validators';

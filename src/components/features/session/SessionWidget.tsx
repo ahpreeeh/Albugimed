@@ -12,7 +12,7 @@ import { useSessionTimingStorage } from '@/hooks/useSessionTimingStorage';
 import type { DayLoad } from '@/types/strategy';
 import type { DifficultyRating } from '@/types/session';
 import { reasonLabel, taskTypeLabel, reasonBadgeClass, difficultyColor } from '@/types/session';
-import { cn, toLocalISOString } from '@/lib/utils';
+import { cn, toLocalISOString } from '@/shared/lib/cn';
 
 // ─── Timer hook (with pause support) ─────────────────────────────────
 function useTimer(isRunning: boolean, isPaused: boolean): number {

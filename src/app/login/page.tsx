@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { Activity, Mail, Lock, ArrowRight, Check } from 'lucide-react';
 import { login, signup } from './actions';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/cn';
 
 export default function LoginPage() {
     // Mode d'affichage : "login" ou "signup"

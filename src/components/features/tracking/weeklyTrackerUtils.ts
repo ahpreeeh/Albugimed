@@ -4,7 +4,7 @@ import {
   getSessionTimingChapterKey,
   mergeSessionTimingEntries,
 } from "@/lib/sessionTiming";
-import { toLocalISOString } from "@/lib/utils";
+import { toLocalISOString } from "@/shared/lib/cn";
 import type { ActiveStrategy } from "@/types/strategy";
 
 export type WeeklyTrackerDay = {
