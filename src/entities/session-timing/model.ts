@@ -1,5 +1,5 @@
 import type { AnnaleLevel, SessionReason, SessionTaskType } from "@/types/session";
-import { toLocalISOString } from "@/shared/lib/cn";
+import { toLocalISOString } from "@/shared/lib/dates";
 
 export interface SessionTimingEntry {
   taskId?: string;
