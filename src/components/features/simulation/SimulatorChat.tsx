@@ -6,7 +6,7 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/ge
 import { cn } from '@/shared/lib/cn';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage, ErrorEntry } from '@/types';
-import { validateChatMessages, validateErrorBank } from '@/lib/validators';
+import { validateChatMessages, validateErrorBank } from '@/shared/lib/validators';
 import { useGeminiConfig } from '@/hooks/useGeminiConfig';
 import { createClient } from '@/utils/supabase/client';
 

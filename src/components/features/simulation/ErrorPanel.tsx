@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import type { ErrorEntry } from '@/types';
-import { validateErrorBank } from '@/lib/validators';
+import { validateErrorBank } from '@/shared/lib/validators';
 
 type FilterMode = 'all' | 'new' | 'exported';
 

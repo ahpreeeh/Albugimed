@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { BookOpen, LucideIcon } from 'lucide-react';
-import { validateSubjects } from '@/lib/validators';
+import { validateSubjects } from '@/shared/lib/validators';
 import { MEDICAL_ICON_MAP, MEDICAL_ICON_NAMES } from '@/components/icons/MedicalIcons';
 import type { MedIconProps } from '@/components/icons/MedicalIcons';
 import { createClient } from '@/utils/supabase/client';

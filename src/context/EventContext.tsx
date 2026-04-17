@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useCallback } from 'react';
-import { validateEvents } from '@/lib/validators';
+import { validateEvents } from '@/shared/lib/validators';
 import { useCloudStorage } from '@/hooks/useCloudStorage';
 
 export interface AgendaEvent {
