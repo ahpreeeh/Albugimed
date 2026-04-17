@@ -3,7 +3,7 @@
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
 **Dernière mise à jour** : 2026-04-15
-**Mise à jour par** : Claude (session interactive)
+**Mise à jour par** : Codex (session interactive)
 
 ---
 
@@ -50,7 +50,10 @@
 
 ### Phase 1 — Infrastructure partagée
 
-**Non commencée.**
+| Étape | Statut | Preuve |
+|---|---|---|
+| 1.1 `shared/config/storageKeys.ts` | ✅ | `src/shared/config/storageKeys.ts` créé avec les 14 clés de `KNOWN_KEYS`, `npm run build` OK |
+| 1.2 `shared/api/userDataRepository.ts` + tests | ⏳ | Lot A en cours — reste à exécuter |
 
 ### Phases 2 à 8
 
@@ -72,11 +75,11 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochain lot à exécuter — **Lot A (étapes 1.1 → 1.2)**
+## 4. Prochain lot à exécuter — **Lot A (étape 1.2 restante)**
 
 Le user a imposé un découpage par lots courts avec stop/rapport entre chaque lot. Voir §5 pour la séquence complète de Phase 1.
 
-### Lot A — 2 étapes, aucune UI modifiée, risque global faible
+### Lot A — dernière étape restante, aucune UI modifiée, risque global faible
 
 #### Étape 1.1 — Créer `src/shared/config/storageKeys.ts`
 
