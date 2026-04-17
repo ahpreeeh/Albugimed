@@ -7,7 +7,7 @@ import {
   mergeSessionTimingEntries,
   normalizeSessionTimingEntries,
   type SessionTimingEntry,
-} from "@/lib/sessionTiming";
+} from "@/entities/session-timing/model";
 
 const STORAGE_KEY = "med-pilot-session-timing";
 const SYNC_EVENT_NAME = "albugi:session-timing-sync";

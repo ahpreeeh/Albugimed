@@ -1,9 +1,9 @@
 import type { Subject } from "@/context/SubjectContext";
-import type { SessionTimingEntry } from "@/lib/sessionTiming";
+import type { SessionTimingEntry } from "@/entities/session-timing/model";
 import {
   getSessionTimingChapterKey,
   mergeSessionTimingEntries,
-} from "@/lib/sessionTiming";
+} from "@/entities/session-timing/model";
 import { toLocalISOString } from "@/shared/lib/cn";
 import type { ActiveStrategy } from "@/types/strategy";
 

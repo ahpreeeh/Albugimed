@@ -3,7 +3,7 @@ import {
   getSessionTimingDate,
   mergeSessionTimingEntries,
   normalizeSessionTimingEntries,
-} from "@/lib/sessionTiming";
+} from "@/entities/session-timing/model";
 
 describe("sessionTiming helpers", () => {
   it("rebuilds the local completion date from startedAt and duration", () => {
