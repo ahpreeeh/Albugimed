@@ -16,7 +16,7 @@
 | Tag de rollback | `backup/pre-refactor-v2` (HEAD pristine de `main` avant tout refactor) |
 | HEAD de la branche refactor | `3355c67` (voir `git log --oneline -5`) |
 | Remote push | **non pushé** — tout est local |
-| Tests | 4 fichiers / 32 tests / 0 échec |
+| Tests | 5 fichiers / 36 tests / 0 échec |
 | Build Next.js | ✅ OK (6 routes statiques, middleware 79.6 kB) |
 
 ### Commits sur la branche refactor (du plus récent au plus ancien)
@@ -52,8 +52,8 @@
 
 | Étape | Statut | Preuve |
 |---|---|---|
-| 1.1 `shared/config/storageKeys.ts` | ✅ | `src/shared/config/storageKeys.ts` créé avec les 14 clés de `KNOWN_KEYS`, `npm run build` OK |
-| 1.2 `shared/api/userDataRepository.ts` + tests | ⏳ | Lot A en cours — reste à exécuter |
+| 1.1 `shared/config/storageKeys.ts` | ✅ | `src/shared/config/storageKeys.ts` créé avec les 14 clés de `KNOWN_KEYS`, commit `e9326d4`, `npm run build` OK |
+| 1.2 `shared/api/userDataRepository.ts` + tests | ✅ | `src/shared/api/userDataRepository.ts` + `src/shared/api/__tests__/userDataRepository.test.ts` créés, `npm test -- userDataRepository` OK, `npm test` OK, `npm run build` OK |
 
 ### Phases 2 à 8
 
@@ -75,45 +75,15 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochain lot à exécuter — **Lot A (étape 1.2 restante)**
+## 4. Prochain lot à exécuter — **Lot B (étapes 1.3 → 1.8)**
 
 Le user a imposé un découpage par lots courts avec stop/rapport entre chaque lot. Voir §5 pour la séquence complète de Phase 1.
 
-### Lot A — dernière étape restante, aucune UI modifiée, risque global faible
+### Lot B — 6 étapes, pas encore branché aux gros consommateurs, risque global faible à moyen
 
-#### Étape 1.1 — Créer `src/shared/config/storageKeys.ts`
-
-- **Objectif** : centraliser toutes les clés de stockage en constantes typées
-- **Fichiers** : CRÉE `src/shared/config/storageKeys.ts`
-- **Source des clés** : `src/hooks/useMigration.ts` lignes 19-43 (constante `KNOWN_KEYS` existante — 14 clés)
-- **Prompt** (copiable tel quel) :
-  > Crée le fichier `src/shared/config/storageKeys.ts` qui exporte une constante `STORAGE_KEYS as const` contenant toutes les clés listées dans `KNOWN_KEYS` de `src/hooks/useMigration.ts` lignes 19-43. Structure-les par domaine (subjects, strategy, session, simulation, events, planning, home, chat). Ajoute un type `StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS]`. Ne modifie AUCUN autre fichier — c'est juste une création. Vérifie que le fichier compile avec `npm run build`.
-- **Valide** : `npm run build` compile sans erreur
-- **Commit** : `refactor(phase-1): step 1.1 — add shared/config/storageKeys.ts`
-- **Risque** : nul (création pure, aucun consommateur)
-- **Reversible** : oui
-
-#### Étape 1.2 — Créer `src/shared/api/userDataRepository.ts` + tests
-
-- **Objectif** : façade générique sur la table Supabase `user_data`, testable et testée
-- **Dépend** : 1.1
-- **Fichiers** : CRÉE `src/shared/api/userDataRepository.ts` + `src/shared/api/__tests__/userDataRepository.test.ts`
-- **Prompt** (copiable tel quel) :
-  > Crée `src/shared/api/userDataRepository.ts` qui exporte un objet `userDataRepository` avec 4 méthodes : `get<T>(key: string): Promise<T | null>`, `set<T>(key: string, value: T): Promise<void>`, `remove(key: string): Promise<void>`, `batchGet(keys: string[]): Promise<Record<string, unknown>>`. L'implémentation utilise `createClient` de `src/utils/supabase/client`. Si pas d'user connecté, `get` retourne `null` et `set`/`remove` retournent silencieusement (fire-and-forget). Toutes les erreurs Supabase sont loggées en `console.warn` avec le préfixe `[userDataRepository]` mais ne throw pas. Crée aussi `src/shared/api/__tests__/userDataRepository.test.ts` avec vitest qui mock `@/utils/supabase/client` et teste : `get` sans user → `null`, `set` puis `get` → deep-equal, `remove` après `set` → `null`, `batchGet` avec 3 clés dont 1 absente → objet avec 2 entrées. Ne modifier aucun consommateur existant.
-- **Valide** : `npm test -- userDataRepository` → tous les tests passent ; `npm run build` compile
-- **Commit** : `refactor(phase-1): step 1.2 — add userDataRepository facade + tests`
-- **Risque** : faible (code neuf, non branché à aucun consommateur)
-- **Reversible** : oui
-
-### Après le Lot A → STOP
-
-Rapport attendu au user avec :
-- Les 2 nouveaux fichiers créés + leurs tailles
-- Les 2 commits hash + messages
-- Résultat de `npm run build` et `npm test`
-- Éventuelles surprises (aucune clé manquante dans `KNOWN_KEYS` par ex.)
-
-Puis attendre le feu vert pour le Lot B.
+- **Contenu** : moves `lib/*` → `shared/lib/*`, move `lib/sessionTiming.ts` → `entities/session-timing/model.ts`, création de `shared/hooks/useCloudValue.ts` non branchée
+- **Validation attendue** : `npm test` + `npm run build` après les find-and-replace d'imports
+- **Stop** : rapport précis au user avant de passer au Lot C
 
 ---
 
@@ -226,3 +196,4 @@ Tag de rollback : backup/pre-refactor-v2
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-04-15 | Claude (session initiale) | Création du document. Phase 0 terminée + pré-Phase-1. Prêt pour Lot A. |
+| 2026-04-15 | Codex | Lot A terminé : étapes 1.1 et 1.2 validées. Prochain lot : B (1.3 → 1.8). |
