@@ -2,8 +2,8 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-15
-**Mise à jour par** : Codex (session interactive)
+**Dernière mise à jour** : 2026-04-17
+**Mise à jour par** : Claude (session interactive)
 
 ---
 
@@ -14,14 +14,23 @@
 | Branche courante | `refactor/architecture-v2` |
 | Base | `main` |
 | Tag de rollback | `backup/pre-refactor-v2` (HEAD pristine de `main` avant tout refactor) |
-| HEAD de la branche refactor | `3355c67` (voir `git log --oneline -5`) |
+| HEAD de la branche refactor | `2c91300` (voir `git log --oneline -10`) |
 | Remote push | **non pushé** — tout est local |
-| Tests | 5 fichiers / 36 tests / 0 échec |
+| Tests | 6 fichiers / 39 tests / 0 échec |
 | Build Next.js | ✅ OK (6 routes statiques, middleware 79.6 kB) |
 
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+2c91300 refactor(phase-1): step 1.8 — add shared/hooks/useCloudValue on userDataRepository
+416f117 refactor(phase-1): step 1.7 — extract toLocalISOString to shared/lib/dates + tests
+516a608 refactor(phase-1): step 1.6 — move lib/sessionTiming to entities/session-timing/model
+caee08d refactor(phase-1): step 1.5 — move lib/theme to shared/lib/theme
+c43963d refactor(phase-1): step 1.4 — move lib/validators to shared/lib/validators
+9275191 refactor(phase-1): step 1.3 — move lib/utils to shared/lib/cn
+9e92c87 refactor(phase-1): step 1.2 — add userDataRepository facade + tests
+e9326d4 refactor(phase-1): step 1.1 — add shared/config/storageKeys.ts
+a1adf4f docs(refactor): add REFACTOR_PLAN.md and REFACTOR_HANDOFF.md
 3355c67 chore(phase-0): ignore .claude/ and /backups/
 14f7277 chore(phase-0): add npm test + test:watch scripts
 1dbb595 feat: ajout du WeeklyTracker, session timing storage et documentation technique   ← base main, pointée par backup/pre-refactor-v2
@@ -54,6 +63,12 @@
 |---|---|---|
 | 1.1 `shared/config/storageKeys.ts` | ✅ | `src/shared/config/storageKeys.ts` créé avec les 14 clés de `KNOWN_KEYS`, commit `e9326d4`, `npm run build` OK |
 | 1.2 `shared/api/userDataRepository.ts` + tests | ✅ | `src/shared/api/userDataRepository.ts` + `src/shared/api/__tests__/userDataRepository.test.ts` créés, `npm test -- userDataRepository` OK, `npm test` OK, `npm run build` OK |
+| 1.3 `lib/utils.ts` → `shared/lib/cn.ts` | ✅ | Move + 16 fichiers mis à jour (`@/lib/utils` → `@/shared/lib/cn`). Relatif `./utils` de `sessionTiming.ts` corrigé aussi. Commit `9275191`, build + tests OK. |
+| 1.4 `lib/validators.ts` → `shared/lib/validators.ts` | ✅ | Move + 4 fichiers mis à jour. Commit `c43963d`, build + tests OK. |
+| 1.5 `lib/theme.ts` → `shared/lib/theme.ts` | ✅ | Move + 3 fichiers mis à jour. Commit `caee08d`, build + tests OK. |
+| 1.6 `lib/sessionTiming.ts` → `entities/session-timing/model.ts` | ✅ | Move du module et de ses tests + 3 fichiers consommateurs mis à jour. `src/lib/` vidé et supprimé. Commit `516a608`, build + tests OK. |
+| 1.7 extract `toLocalISOString` → `shared/lib/dates.ts` + tests | ✅ | Nouvelle fonction isolée dans `shared/lib/dates.ts`, retirée de `cn.ts`, 4 consommateurs repointés (dont `SessionWidget` qui importait mixte). 3 tests ajoutés. Commit `416f117`, 39 tests OK. |
+| 1.8 `shared/hooks/useCloudValue.ts` (non branché) | ✅ | Successeur de `useCloudStorage` construit sur `userDataRepository`. Même API publique (`data/save/saveWith/clear/isReady`). Aucun consommateur branché. Commit `2c91300`, build + tests OK. |
 
 ### Phases 2 à 8
 
@@ -75,15 +90,17 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochain lot à exécuter — **Lot B (étapes 1.3 → 1.8)**
+## 4. Prochain lot à exécuter — **Lot C (étapes 1.9 → 1.10 + smoke test)**
 
 Le user a imposé un découpage par lots courts avec stop/rapport entre chaque lot. Voir §5 pour la séquence complète de Phase 1.
 
-### Lot B — 6 étapes, pas encore branché aux gros consommateurs, risque global faible à moyen
+### Lot C — 2 étapes + smoke test obligatoire, premier lot qui BRANCHE un consommateur
 
-- **Contenu** : moves `lib/*` → `shared/lib/*`, move `lib/sessionTiming.ts` → `entities/session-timing/model.ts`, création de `shared/hooks/useCloudValue.ts` non branchée
-- **Validation attendue** : `npm test` + `npm run build` après les find-and-replace d'imports
-- **Stop** : rapport précis au user avant de passer au Lot C
+- **Contenu** :
+  - 1.9 : migrer `PlanningContext` de `useCloudStorage` vers `useCloudValue` (3 clés planning : slots, events, deadlines).
+  - 1.10 : migrer `StrategyContext` de `useCloudStorage` vers `useCloudValue` (clé `med-pilot-active-strategy`).
+- **Validation attendue** : `npm test` + `npm run build` + **smoke test dev obligatoire** (créer événement planning, modifier stratégie, rafraîchir la page, vérifier que les données sont bien persistées et rechargées depuis Supabase).
+- **Stop** : rapport précis au user avant de passer au Lot D. Si smoke test échoue → revert de l'étape concernée et redémarrage.
 
 ---
 
@@ -197,3 +214,4 @@ Tag de rollback : backup/pre-refactor-v2
 |---|---|---|
 | 2026-04-15 | Claude (session initiale) | Création du document. Phase 0 terminée + pré-Phase-1. Prêt pour Lot A. |
 | 2026-04-15 | Codex | Lot A terminé : étapes 1.1 et 1.2 validées. Prochain lot : B (1.3 → 1.8). |
+| 2026-04-17 | Claude (session interactive) | Lot B terminé : étapes 1.3 à 1.8 validées (6 commits atomiques). Build + 39 tests OK. `src/lib/` supprimé. `shared/hooks/useCloudValue.ts` créé mais pas encore branché aux consommateurs. Prochain lot : C (1.9 → 1.10 + smoke test). |
