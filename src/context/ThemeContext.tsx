@@ -14,7 +14,7 @@ import {
     THEME_STORAGE_KEY,
     resolveTheme,
     type ThemeId,
-} from "@/lib/theme";
+} from "@/shared/lib/theme";
 
 interface ThemeContextValue {
     theme: ThemeId;

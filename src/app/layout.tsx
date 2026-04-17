@@ -3,7 +3,7 @@ import { DM_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import LayoutShell from "@/components/layout/LayoutShell";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { DEFAULT_THEME, THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme";
+import { DEFAULT_THEME, THEME_BOOTSTRAP_SCRIPT } from "@/shared/lib/theme";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
     subsets: ["latin"],

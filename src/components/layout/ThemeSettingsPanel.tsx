@@ -2,7 +2,7 @@
 
 import { Check, Settings2, X, Download, Upload, LogOut, Loader2 } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
-import type { ThemeId } from "@/lib/theme";
+import type { ThemeId } from "@/shared/lib/theme";
 import { cn } from "@/shared/lib/cn";
 import { createClient } from "@/utils/supabase/client";
 import { useRef, useState } from "react";
