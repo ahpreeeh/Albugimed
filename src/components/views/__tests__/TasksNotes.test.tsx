@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-// ── Mock useCloudStorage ──────────────────────────────────────────────
+// ── Mock useCloudValue ───────────────────────────────────────────────
 // Each key gets its own in-memory store so tests can inspect saved values.
 
 const stores: Record<string, { data: unknown; save: ReturnType<typeof vi.fn>; }> = {};
@@ -18,8 +18,8 @@ function getStore<T>(key: string, defaultValue: T) {
     return stores[key];
 }
 
-vi.mock('@/hooks/useCloudStorage', () => ({
-    useCloudStorage: <T,>(key: string, defaultValue: T) => {
+vi.mock('@/shared/hooks/useCloudValue', () => ({
+    useCloudValue: <T,>(key: string, defaultValue: T) => {
         const store = getStore(key, defaultValue);
         return {
             data: store.data as T,

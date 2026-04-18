@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
-import { useCloudStorage } from "@/hooks/useCloudStorage";
+import { useCloudValue } from "@/shared/hooks/useCloudValue";
 import {
     LayoutGrid, Clock, BookOpen, AlertCircle,
     ChevronRight, Zap, GraduationCap, Calendar,
@@ -25,7 +25,7 @@ import { WeeklyTracker } from "@/components/features/tracking/WeeklyTracker";
 const EDN_DATE_KEY = 'med-pilot-edn-date';
 
 const EdnCountdown = () => {
-    const { data: ednDate, save: saveCloud } = useCloudStorage<string>(EDN_DATE_KEY, '');
+    const { data: ednDate, save: saveCloud } = useCloudValue<string>(EDN_DATE_KEY, '');
     const [editing, setEditing] = useState(false);
 
     const save = (val: string) => {
@@ -182,9 +182,9 @@ export function formatNoteDate(ts: number): string {
 
 export const TasksNotes = () => {
     const [tab, setTab] = useState<'tasks' | 'notes'>('tasks');
-    const { data: tasks, save: saveTasks } = useCloudStorage<QuickTask[]>(TASKS_KEY, []);
-    const { data: savedNotes, save: saveNotesV2, isReady: notesReady } = useCloudStorage<QuickNote[]>(NOTES_V2_KEY, []);
-    const { data: oldNotes } = useCloudStorage<string>(NOTES_KEY, '');
+    const { data: tasks, save: saveTasks } = useCloudValue<QuickTask[]>(TASKS_KEY, []);
+    const { data: savedNotes, save: saveNotesV2, isReady: notesReady } = useCloudValue<QuickNote[]>(NOTES_V2_KEY, []);
+    const { data: oldNotes } = useCloudValue<string>(NOTES_KEY, '');
     const [input, setInput] = useState('');
 
     // Notes state
