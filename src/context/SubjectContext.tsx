@@ -6,6 +6,7 @@ import { validateSubjects } from '@/shared/lib/validators';
 import { MEDICAL_ICON_MAP, MEDICAL_ICON_NAMES } from '@/components/icons/MedicalIcons';
 import type { MedIconProps } from '@/components/icons/MedicalIcons';
 import { createClient } from '@/utils/supabase/client';
+import type { ChapterStatus, ChapterProgress, Chapter, Subject } from '@/entities/subject/types';
 
 // ─── Icon map ─────────────────────────────────────────────────────────
 export const ICON_MAP: Record<string, LucideIcon | React.FC<MedIconProps>> = {
@@ -13,41 +14,8 @@ export const ICON_MAP: Record<string, LucideIcon | React.FC<MedIconProps>> = {
     BookOpen,
 };
 
-// ─── Types ────────────────────────────────────────────────────────────
-export interface ChapterStatus {
-    t1: boolean;
-    annales: boolean;
-    t2: boolean;
-}
-
-export interface ChapterProgress {
-    courseStarted: boolean;
-    level1Done: boolean;
-    reactivationDone: boolean;
-    advancedDone: boolean;
-    firstSeenDate: string | null;
-    lastWorkedDate: string | null;
-    lastTrainingDate: string | null;
-    lastReviewDifficulty?: 'red' | 'orange' | 'green' | 'blue';
-    nextReviewDate?: string | null;
-}
-
-export interface Chapter {
-    id: string;
-    title: string;
-    status: ChapterStatus;
-    progress: ChapterProgress;
-}
-
-export interface Subject {
-    id: string;
-    title: string;
-    iconName: string;
-    chapters: Chapter[];
-    examDate?: string;
-    year?: string;
-    semester?: string;
-}
+// ─── Types (ré-export pour BC jusqu'à step 2.6) ──────────────────────
+export type { ChapterStatus, ChapterProgress, Chapter, Subject };
 
 interface SubjectContextType {
     subjects: Subject[];
