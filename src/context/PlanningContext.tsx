@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { RecurrentSlot, PlanningEvent, Deadline, RecurrentSlotUtils } from "@/types/planning";
-import { useCloudStorage } from "@/hooks/useCloudStorage";
+import { useCloudValue } from "@/shared/hooks/useCloudValue";
 
 // ─── Storage Keys ─────────────────────────────────────────────────────
 const SLOTS_KEY     = "albugi-planning-slots";
@@ -66,9 +66,9 @@ function addDays(d: Date, n: number): Date {
 
 // ─── Provider ─────────────────────────────────────────────────────────
 export const PlanningProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { data: savedSlots,     saveWith: saveSlots     } = useCloudStorage<RecurrentSlot[]>(SLOTS_KEY,     []);
-    const { data: savedEvents,    saveWith: saveEvents    } = useCloudStorage<PlanningEvent[]>(EVENTS_KEY,    []);
-    const { data: savedDeadlines, saveWith: saveDeadlines } = useCloudStorage<Deadline[]>(DEADLINES_KEY, []);
+    const { data: savedSlots,     saveWith: saveSlots     } = useCloudValue<RecurrentSlot[]>(SLOTS_KEY,     []);
+    const { data: savedEvents,    saveWith: saveEvents    } = useCloudValue<PlanningEvent[]>(EVENTS_KEY,    []);
+    const { data: savedDeadlines, saveWith: saveDeadlines } = useCloudValue<Deadline[]>(DEADLINES_KEY, []);
 
     const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => getMonday(new Date()));
 
