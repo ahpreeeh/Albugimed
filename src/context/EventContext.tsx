@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useCallback } from 'react';
 import { validateEvents } from '@/shared/lib/validators';
-import { useCloudStorage } from '@/hooks/useCloudStorage';
+import { useCloudValue } from '@/shared/hooks/useCloudValue';
 
 export interface AgendaEvent {
     id: string;
@@ -53,7 +53,7 @@ function toDateStr(d: Date): string {
 
 // ─── Provider ────────────────────────────────────────────────────────
 export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { data: rawEvents, saveWith } = useCloudStorage<AgendaEvent[]>(
+    const { data: rawEvents, saveWith } = useCloudValue<AgendaEvent[]>(
         'med-pilot-events',
         [],
     );
