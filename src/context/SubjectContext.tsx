@@ -7,6 +7,7 @@ import { MEDICAL_ICON_MAP, MEDICAL_ICON_NAMES } from '@/components/icons/Medical
 import type { MedIconProps } from '@/components/icons/MedicalIcons';
 import { createClient } from '@/utils/supabase/client';
 import type { ChapterStatus, ChapterProgress, Chapter, Subject } from '@/entities/subject/types';
+import { createDefaultProgress } from '@/entities/subject/model';
 
 // ─── Icon map ─────────────────────────────────────────────────────────
 export const ICON_MAP: Record<string, LucideIcon | React.FC<MedIconProps>> = {
@@ -33,20 +34,6 @@ interface SubjectContextType {
 const SubjectContext = createContext<SubjectContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'med-pilot-subjects-v4';
-
-function createDefaultProgress(): ChapterProgress {
-    return {
-        courseStarted: false,
-        level1Done: false,
-        reactivationDone: false,
-        advancedDone: false,
-        firstSeenDate: null,
-        lastWorkedDate: null,
-        lastTrainingDate: null,
-        lastReviewDifficulty: undefined,
-        nextReviewDate: null,
-    };
-}
 
 // ─── Provider ─────────────────────────────────────────────────────────
 export const SubjectProvider = ({ children }: { children: ReactNode }) => {
