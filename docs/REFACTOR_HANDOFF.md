@@ -80,6 +80,7 @@ a1adf4f docs(refactor): add REFACTOR_PLAN.md and REFACTOR_HANDOFF.md
 | 1.11 `EventContext` → `useCloudValue` | ✅ | 1 call site migré (`med-pilot-events`). Commit `47992cb`, build + tests OK. |
 | 1.12 `EdnCountdown` + `TasksNotes` → `useCloudValue` | ✅ | 4 call sites dans `HomeView.tsx` (EDN_DATE, TASKS, NOTES_V2, NOTES v1 read-only). Mock `@/hooks/useCloudStorage` → `@/shared/hooks/useCloudValue` dans `TasksNotes.test.tsx`. Commit `44c8b75`, build + tests OK. |
 | 1.13 `useSessionTimingStorage` → `userDataRepository` | ✅ | Hook réécrit : suppression de `createClient`/`useRef(createClient)`, 3 appels Supabase (select/upsert/delete) remplacés par `userDataRepository.get/set/remove`. Test refondu avec `vi.hoisted` pour mocker le repository. API publique du hook inchangée. Commit `00bf415`, build + tests OK. |
+| 1.14 suppression conditionnelle `useCloudStorage.ts` | ⚠️ reportée | **Suppression non effectuée** : 2 consommateurs restants (`ErrorPanel.tsx`, `AnkiExport.tsx`, clé `med-pilot-error-bank`) — leur migration est planifiée en Phase 7 (étapes 7.9 et 7.10). Prompt du plan 1.14 prévoit ce cas. Build + tests OK, fichier `src/hooks/useCloudStorage.ts` conservé tel quel. |
 
 ### Phases 2 à 8
 
@@ -101,25 +102,22 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochain lot à exécuter — **Lot E (étape 1.14)**
+## 4. Prochain lot à exécuter — **Phase 1 terminée côté Phase 1, passage à Phase 2**
 
-Le user a imposé un découpage par lots courts avec stop/rapport entre chaque lot. Voir §5 pour la séquence complète de Phase 1.
-
-### Lot E — 1 étape, suppression conditionnelle du legacy hook
-
-- **Contenu** :
-  - 1.14 : vérifier qu'aucun import `@/hooks/useCloudStorage` ne subsiste dans `src/`. Si c'est le cas, **supprimer `src/hooks/useCloudStorage.ts`**. Sinon, lister les fichiers qui l'importent encore et reporter la suppression.
-- **Blocage connu** : `ErrorPanel.tsx` et `AnkiExport.tsx` (simulation) utilisent encore `useCloudStorage`. Ils sont hors scope Phase 1 — leur migration est prévue en Phase 7 (étapes 7.9 et 7.10 du `REFACTOR_PLAN.md`). Le prompt 1.14 prévoit ce cas : listing au lieu de suppression.
-- **Validation attendue** : `npm test` + `npm run build` + smoke test si suppression effective.
+Phase 1 est **terminée en ce qui concerne ses 13 premières étapes validées** (1.1 → 1.13). L'étape 1.14 (suppression de `useCloudStorage.ts`) est **reportée à après Phase 7** (quand ErrorPanel + AnkiExport auront été migrés en étapes 7.9 et 7.10).
 
 ### Smoke test Lots C + D (encore à faire manuellement par le user)
 
-Les étapes 1.9 → 1.13 ont toutes passé build + tests automatiques (39 tests, 0 échec). Le smoke test manuel reste à effectuer sur le dev server :
+Validé programmatiquement : build + 39 tests + dev server boot + page login 200 + middleware OK + 0 erreur/warning dans logs dev. **Non validé automatiquement** (nécessite session Supabase authentifiée) :
 - Planning : créer événement one-off, slot récurrent, deadline → refresh → persistance OK
 - Strategy : modifier puis refresh → persistance OK
 - Agenda (`EventContext`) : créer un event → refresh → persistance OK
 - Home : modifier date EDN, créer task, écrire note → refresh → persistance OK
 - Session timing : démarrer puis compléter une session → vérifier `WeeklyTracker` et `med-pilot-session-timing` en Supabase
+
+### Prochaine phase logique
+
+Voir `REFACTOR_PLAN.md` §5 Phase 2 : découpage en entities + migration des gros contexts (`SubjectContext`, `SessionEngineContext`). Préalable : discussion avec le user pour cadrer Phase 2 (périmètre et découpage en lots).
 
 ---
 
@@ -235,3 +233,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-15 | Codex | Lot A terminé : étapes 1.1 et 1.2 validées. Prochain lot : B (1.3 → 1.8). |
 | 2026-04-17 | Claude (session interactive) | Lot B terminé : étapes 1.3 à 1.8 validées (6 commits atomiques). Build + 39 tests OK. `src/lib/` supprimé. `shared/hooks/useCloudValue.ts` créé mais pas encore branché aux consommateurs. Prochain lot : C (1.9 → 1.10 + smoke test). |
 | 2026-04-18 | Claude (session interactive) | Lots C et D enchaînés sur autorisation conditionnée aux tests. 5 commits atomiques (1.9 → 1.13). Build + 39 tests OK à chaque étape. `PlanningContext`, `StrategyContext`, `EventContext`, `EdnCountdown`, `TasksNotes` migrés sur `useCloudValue`. `useSessionTimingStorage` refondé sur `userDataRepository` (tests ré-écrits avec `vi.hoisted`). `useCloudStorage` encore utilisé par `ErrorPanel` + `AnkiExport` (scope Phase 7). Prochain lot : E (1.14). |
+| 2026-04-18 | Claude (session interactive) | Lot E : étape 1.14 exécutée selon le plan. Grep : 2 importeurs subsistent (`ErrorPanel.tsx`, `AnkiExport.tsx`). Conformément au prompt (`si importeurs restants, liste-les, ne supprime pas`), **`src/hooks/useCloudStorage.ts` conservé**. Build final + 39 tests OK. Suppression reportée à après Phase 7 (étapes 7.9 + 7.10 migreront ces 2 derniers consommateurs). Smoke test programmatique OK (HTTP /login 200, middleware OK, 0 erreur logs). Smoke test UI authentifié à faire par le user. |
