@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useCallback, ReactNode } from 'react';
 import type { ActiveStrategy } from '@/types/strategy';
-import { useCloudStorage } from '@/hooks/useCloudStorage';
+import { useCloudValue } from '@/shared/hooks/useCloudValue';
 
 // ─── Storage key ─────────────────────────────────────────────────────
 const STORAGE_KEY = 'med-pilot-active-strategy';
@@ -19,7 +19,7 @@ const StrategyContext = createContext<StrategyContextType | undefined>(undefined
 
 // ─── Provider ────────────────────────────────────────────────────────
 export const StrategyProvider = ({ children }: { children: ReactNode }) => {
-    const { data: rawStrategy, save, clear } = useCloudStorage<ActiveStrategy | null>(
+    const { data: rawStrategy, save, clear } = useCloudValue<ActiveStrategy | null>(
         STORAGE_KEY,
         null,
     );
