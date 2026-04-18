@@ -2,7 +2,7 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-18
+**Dernière mise à jour** : 2026-04-19 (Phase 1 validée côté pratique — smoke user OK, Phase 2 cadrée en 6 lots)
 **Mise à jour par** : Claude (session interactive)
 
 ---
@@ -14,14 +14,18 @@
 | Branche courante | `refactor/architecture-v2` |
 | Base | `main` |
 | Tag de rollback | `backup/pre-refactor-v2` (HEAD pristine de `main` avant tout refactor) |
-| HEAD de la branche refactor | `00bf415` (voir `git log --oneline -20`) |
+| Tag fin Phase 1 | `phase-1-done` sur `e853cac` (point de rollback propre avant Phase 2) |
+| HEAD de la branche refactor | `e853cac` (step 1.14, voir `git log --oneline -20`) |
 | Remote push | **non pushé** — tout est local |
 | Tests | 6 fichiers / 39 tests / 0 échec |
 | Build Next.js | ✅ OK (6 routes statiques, middleware 79.6 kB) |
+| Smoke test Phase 1 | ✅ validé par le user (modifs dans l'app, pas de crash, sauvegarde Supabase OK) |
 
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+e853cac refactor(phase-1): step 1.14 — verify deletion blocker, keep useCloudStorage.ts
+d869f55 docs(refactor): update handoff after Lots C + D (steps 1.9 → 1.13 done)
 00bf415 refactor(phase-1): step 1.13 — migrate useSessionTimingStorage to userDataRepository
 44c8b75 refactor(phase-1): step 1.12 — migrate EdnCountdown + TasksNotes to useCloudValue
 47992cb refactor(phase-1): step 1.11 — migrate EventContext to useCloudValue
@@ -80,11 +84,17 @@ a1adf4f docs(refactor): add REFACTOR_PLAN.md and REFACTOR_HANDOFF.md
 | 1.11 `EventContext` → `useCloudValue` | ✅ | 1 call site migré (`med-pilot-events`). Commit `47992cb`, build + tests OK. |
 | 1.12 `EdnCountdown` + `TasksNotes` → `useCloudValue` | ✅ | 4 call sites dans `HomeView.tsx` (EDN_DATE, TASKS, NOTES_V2, NOTES v1 read-only). Mock `@/hooks/useCloudStorage` → `@/shared/hooks/useCloudValue` dans `TasksNotes.test.tsx`. Commit `44c8b75`, build + tests OK. |
 | 1.13 `useSessionTimingStorage` → `userDataRepository` | ✅ | Hook réécrit : suppression de `createClient`/`useRef(createClient)`, 3 appels Supabase (select/upsert/delete) remplacés par `userDataRepository.get/set/remove`. Test refondu avec `vi.hoisted` pour mocker le repository. API publique du hook inchangée. Commit `00bf415`, build + tests OK. |
-| 1.14 suppression conditionnelle `useCloudStorage.ts` | ⚠️ reportée | **Suppression non effectuée** : 2 consommateurs restants (`ErrorPanel.tsx`, `AnkiExport.tsx`, clé `med-pilot-error-bank`) — leur migration est planifiée en Phase 7 (étapes 7.9 et 7.10). Prompt du plan 1.14 prévoit ce cas. Build + tests OK, fichier `src/hooks/useCloudStorage.ts` conservé tel quel. |
+| 1.14 suppression conditionnelle `useCloudStorage.ts` | ⚠️ reportée (conforme plan) | **Suppression non effectuée** : 2 consommateurs restants (`ErrorPanel.tsx`, `AnkiExport.tsx`, clé `med-pilot-error-bank`) — leur migration est planifiée en Phase 7 (étapes 7.9 et 7.10). Prompt du plan 1.14 prévoit ce cas. Build + tests OK, fichier `src/hooks/useCloudStorage.ts` conservé tel quel. Commit `e853cac`. |
 
-### Phases 2 à 8
+**Clôture Phase 1** : smoke test utilisateur validé le 2026-04-19 (modifs dans l'app OK, pas de crash, sauvegarde Supabase OK). Tag `phase-1-done` posé sur `e853cac`. 14 étapes / 13 commits code + 2 commits docs. **Phase 1 considérée terminée** malgré 1.14 conditionnellement reportée (scope Phase 7).
+
+### Phases 3 à 8
 
 **Non commencées.** Voir `REFACTOR_PLAN.md` pour le détail.
+
+### Phase 2 — Entities layer `subject` + `strategy`
+
+**État** : cadrée en 6 lots (F → K, 10 steps atomiques 2.1 → 2.10). Voir §5b pour le tableau détaillé. **Lot recommandé en priorité : Lot F** (Subject foundation, risque zéro). Exécution non commencée.
 
 ---
 
@@ -102,22 +112,26 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochain lot à exécuter — **Phase 1 terminée côté Phase 1, passage à Phase 2**
+## 4. Prochain lot à exécuter — **Lot F (Phase 2, Subject foundation)**
 
-Phase 1 est **terminée en ce qui concerne ses 13 premières étapes validées** (1.1 → 1.13). L'étape 1.14 (suppression de `useCloudStorage.ts`) est **reportée à après Phase 7** (quand ErrorPanel + AnkiExport auront été migrés en étapes 7.9 et 7.10).
+Phase 1 est **validée** (13 étapes + 1.14 conditionnellement reportée). Smoke test utilisateur OK. Tag `phase-1-done` posé sur `e853cac`. On démarre la **Phase 2 : Entities layer pour `subject` et `strategy`**.
 
-### Smoke test Lots C + D (encore à faire manuellement par le user)
+**Asymétrie à exploiter** : `StrategyContext` (59 lig) utilise déjà `useCloudValue` après l'étape 1.10 — **aucun Supabase hand-rolled à nettoyer**. `SubjectContext` (299 lig) conserve encore son hand-rolled Supabase (L106-111 select, L133-145 upsert). → Subject demande 6 steps, Strategy seulement 4.
 
-Validé programmatiquement : build + 39 tests + dev server boot + page login 200 + middleware OK + 0 erreur/warning dans logs dev. **Non validé automatiquement** (nécessite session Supabase authentifiée) :
-- Planning : créer événement one-off, slot récurrent, deadline → refresh → persistance OK
-- Strategy : modifier puis refresh → persistance OK
-- Agenda (`EventContext`) : créer un event → refresh → persistance OK
-- Home : modifier date EDN, créer task, écrire note → refresh → persistance OK
-- Session timing : démarrer puis compléter une session → vérifier `WeeklyTracker` et `med-pilot-session-timing` en Supabase
+### Lot F — Subject foundation (steps 2.1 + 2.2)
+
+Risque : **faible**. Pure addition, aucun consommateur touché.
+
+| Step | Action | Fichiers créés | Tests |
+|---|---|---|---|
+| 2.1 | Créer `entities/subject/types.ts` en **copiant** les types de `SubjectContext.tsx` L17-50 (`ChapterStatus`, `ChapterProgress`, `Chapter`, `Subject`). Conserver la compat en ré-exportant depuis `SubjectContext.tsx`. | `src/entities/subject/types.ts` | — |
+| 2.2 | Créer `entities/subject/model.ts` en extrayant `createDefaultProgress()` (L69-81) + ajouter `computeProgress(chapter)` qui dérive `{courseStartedCount, level1Count, fullCount}` pour futurs widgets. `SubjectContext.tsx` ré-importe `createDefaultProgress` depuis le model. | `src/entities/subject/model.ts`, `src/entities/subject/__tests__/model.test.ts` (~60 lig) | ✅ à écrire |
+
+**Vérification Lot F** : `npm test` → 41 tests verts (39 + 2 nouveaux), `npm run build` vert, `git diff src/context/SubjectContext.tsx` montre uniquement des imports modifiés.
 
 ### Prochaine phase logique
 
-Voir `REFACTOR_PLAN.md` §5 Phase 2 : découpage en entities + migration des gros contexts (`SubjectContext`, `SessionEngineContext`). Préalable : discussion avec le user pour cadrer Phase 2 (périmètre et découpage en lots).
+Après Lot F → Lot G (step 2.3, Subject api.ts). Puis Lot H (2.4, SubjectContext migration — **smoke obligatoire**). Voir §5b pour le plan complet Phase 2.
 
 ---
 
@@ -133,7 +147,37 @@ Imposé par le user pour limiter le blast radius. Chaque lot se termine par un s
 | **D** | 1.11 → 1.13 + smoke test | Migrer `EventContext`, `EdnCountdown`, `TasksNotes` vers `useCloudValue`. Migrer `useSessionTimingStorage` vers `userDataRepository`. Smoke test : créer agenda event, changer date EDN, écrire note, démarrer session pour toucher le timing. | Stop + smoke test obligatoire |
 | **E** | 1.14 | Supprimer `src/hooks/useCloudStorage.ts` (plus aucun consommateur). Build final. | Stop + fin Phase 1 |
 
-**À la fin de Phase 1** : tag `phase-1-done`, smoke test complet selon `REFACTOR_PLAN.md` §9.
+**À la fin de Phase 1** : tag `phase-1-done`, smoke test complet selon `REFACTOR_PLAN.md` §9. ✅ fait le 2026-04-19.
+
+---
+
+## 5b. Plan des lots pour la Phase 2
+
+10 steps atomiques (2.1 → 2.10) regroupés en **6 lots courts**. Règle : `npm test` vert + HEAD commité avant de démarrer le lot suivant. Lots H et K demandent un smoke test utilisateur.
+
+| Lot | Étapes | Ce qu'il contient | Risque | Action de validation après |
+|---|---|---|---|---|
+| **F** | 2.1 → 2.2 | Subject foundation : `entities/subject/types.ts` (copie depuis `SubjectContext`) + `entities/subject/model.ts` (extrait `createDefaultProgress`, nouveau `computeProgress`) + tests. Aucun consommateur touché. | faible | Stop + rapport |
+| **G** | 2.3 | Subject API layer : `entities/subject/api.ts` (`loadSubjects`, `saveSubjects` via `userDataRepository`) + tests. Fichier **dormant** — pas câblé au Context. | faible | Stop + rapport |
+| **H** | 2.4 | Migration interne `SubjectContext.tsx` : remplacer `createClient()` + `loadFromCloud` + `persist` hand-rolled par `loadSubjects()` / `saveSubjects()` de `api.ts`. **Même clé `med-pilot-subjects-v4`, même format, même API publique.** | **MOYEN** ⚠ | Stop + **smoke test obligatoire** (login → créer subject + chapitres → toggle status → refresh → persistance OK + autre onglet OK) |
+| **I** | 2.5 → 2.6 | `entities/subject/hooks.ts` (façade ré-export) + `sed`-replace dans les **12 consommateurs** : `from '@/context/SubjectContext'` → `from '@/entities/subject/hooks'`. `SubjectContext.tsx` lui-même non touché. | faible | Stop + rapport |
+| **J** | 2.7 → 2.9 | Strategy foundation : `entities/strategy/types.ts` (copie de `src/types/strategy.ts`) + `entities/strategy/model.ts` (`createEmptyStrategy`, nouveau prédicat `isValidStrategy`) + tests + `entities/strategy/hooks.ts` façade. `StrategyContext.tsx` utilise `isValidStrategy` pour la guard L27-33. Bundlé car pas de migration risquée (déjà sur `useCloudValue`). | faible | Stop + rapport |
+| **K** | 2.10 | Strategy imports : `sed`-replace dans les **5 consommateurs** (`@/context/StrategyContext` → `@/entities/strategy/hooks`) + **7 consommateurs** (`@/types/strategy` → `@/entities/strategy/types`) + suppression de `src/types/strategy.ts`. | faible | Stop + **smoke test léger** (login → recharger stratégie → modifier → refresh → OK) + tag `phase-2-done` |
+
+**Lot recommandé à exécuter en priorité : Lot F** (risque zéro, pose les fondations, valide le pattern `entities/*/types.ts` + `model.ts` avant Planning et Session).
+
+**Ordre strict après Lot F** : F → G → H (smoke) → I → J → K (smoke + tag). Ne **PAS** bundler H avec I (mélange risque moyen + find-and-replace = diagnostic difficile en cas de rollback).
+
+### Critères de succès Phase 2
+
+- [ ] `entities/subject/` et `entities/strategy/` existent avec `types.ts`, `model.ts`, `api.ts` (subject only), `hooks.ts` + `__tests__/`
+- [ ] `SubjectContext.tsx` ne contient plus aucun `supabase.from(...)` direct — tout passe par `api.ts`
+- [ ] `StrategyContext.tsx` utilise `isValidStrategy` de `entities/strategy/model.ts`
+- [ ] `src/types/strategy.ts` supprimé
+- [ ] 12 + 5 + 7 = **24 imports migrés** vers les couches entities
+- [ ] `npm test` passe de 39 → ~50 tests
+- [ ] Tag `phase-2-done` posé
+- [ ] Smoke tests user passés (après Lot H et après Lot K)
 
 ---
 
@@ -159,6 +203,16 @@ Imposé par le user pour limiter le blast radius. Chaque lot se termine par un s
 5. **Aucun store Zustand ne lit un autre store directement** — les actions reçoivent les données en paramètres.
 6. **`backups/` jamais commité** — données perso, ignoré via `.gitignore` (déjà en place).
 7. **`.claude/` jamais commité** — settings et plans de session locaux, ignoré via `.gitignore` (déjà en place).
+
+### À surveiller (Phase 3+) — divergences de clés pré-existantes
+
+Identifiées pendant la Phase 1 mais **intentionnellement non touchées** (hors scope refactor d'infrastructure). À consolider lors de la **Phase 3** (Session Engine) où elles tombent dans le périmètre :
+
+- `med-pilot-daily-session` — utilisée par `SessionEngineContext`, **absente** de `KNOWN_KEYS` dans `useMigration.ts`. Migration silencieuse potentiellement invisible.
+- `med-pilot-quick-notes-v2` vs `med-pilot-quick-notes` — `KNOWN_KEYS` contient v1, `HomeView.tsx` lit v2 avec un fallback read-only sur v1 (pattern dual-key intentionnel).
+- `medpilot-theme` — préfixe différent (pas de tiret après "med"), préférence locale volontaire (pas dans Supabase).
+- `med-pilot-gemini-key` / `med-pilot-gemini-model` — credentials machine-local (volontairement pas sync cloud).
+- `med-pilot-migration-done` — flag interne de `useMigration.ts`.
 
 ---
 
@@ -234,3 +288,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-17 | Claude (session interactive) | Lot B terminé : étapes 1.3 à 1.8 validées (6 commits atomiques). Build + 39 tests OK. `src/lib/` supprimé. `shared/hooks/useCloudValue.ts` créé mais pas encore branché aux consommateurs. Prochain lot : C (1.9 → 1.10 + smoke test). |
 | 2026-04-18 | Claude (session interactive) | Lots C et D enchaînés sur autorisation conditionnée aux tests. 5 commits atomiques (1.9 → 1.13). Build + 39 tests OK à chaque étape. `PlanningContext`, `StrategyContext`, `EventContext`, `EdnCountdown`, `TasksNotes` migrés sur `useCloudValue`. `useSessionTimingStorage` refondé sur `userDataRepository` (tests ré-écrits avec `vi.hoisted`). `useCloudStorage` encore utilisé par `ErrorPanel` + `AnkiExport` (scope Phase 7). Prochain lot : E (1.14). |
 | 2026-04-18 | Claude (session interactive) | Lot E : étape 1.14 exécutée selon le plan. Grep : 2 importeurs subsistent (`ErrorPanel.tsx`, `AnkiExport.tsx`). Conformément au prompt (`si importeurs restants, liste-les, ne supprime pas`), **`src/hooks/useCloudStorage.ts` conservé**. Build final + 39 tests OK. Suppression reportée à après Phase 7 (étapes 7.9 + 7.10 migreront ces 2 derniers consommateurs). Smoke test programmatique OK (HTTP /login 200, middleware OK, 0 erreur logs). Smoke test UI authentifié à faire par le user. |
+| 2026-04-19 | Claude (session interactive) | **Phase 1 validée** côté utilisateur (smoke test OK : modifs dans l'app, pas de crash, sauvegarde Supabase OK). Tag `phase-1-done` posé sur `e853cac`. **Phase 2 cadrée** : 10 steps atomiques (2.1 → 2.10) regroupés en 6 lots F→K (voir §5b). Lot recommandé en priorité : Lot F (Subject foundation, risque zéro). Divergences de clés pré-existantes reportées à Phase 3 (voir §7 "À surveiller"). Prochain lot : Lot F. |
