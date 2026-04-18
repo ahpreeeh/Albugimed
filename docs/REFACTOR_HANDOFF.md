@@ -2,7 +2,7 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-17
+**Dernière mise à jour** : 2026-04-18
 **Mise à jour par** : Claude (session interactive)
 
 ---
@@ -14,7 +14,7 @@
 | Branche courante | `refactor/architecture-v2` |
 | Base | `main` |
 | Tag de rollback | `backup/pre-refactor-v2` (HEAD pristine de `main` avant tout refactor) |
-| HEAD de la branche refactor | `2c91300` (voir `git log --oneline -10`) |
+| HEAD de la branche refactor | `00bf415` (voir `git log --oneline -20`) |
 | Remote push | **non pushé** — tout est local |
 | Tests | 6 fichiers / 39 tests / 0 échec |
 | Build Next.js | ✅ OK (6 routes statiques, middleware 79.6 kB) |
@@ -22,6 +22,12 @@
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+00bf415 refactor(phase-1): step 1.13 — migrate useSessionTimingStorage to userDataRepository
+44c8b75 refactor(phase-1): step 1.12 — migrate EdnCountdown + TasksNotes to useCloudValue
+47992cb refactor(phase-1): step 1.11 — migrate EventContext to useCloudValue
+ca7df2f refactor(phase-1): step 1.10 — migrate StrategyContext to useCloudValue
+b021bc7 refactor(phase-1): step 1.9 — migrate PlanningContext to useCloudValue
+7a3d2dd docs(refactor): update handoff after Lot B (steps 1.3 → 1.8 done)
 2c91300 refactor(phase-1): step 1.8 — add shared/hooks/useCloudValue on userDataRepository
 416f117 refactor(phase-1): step 1.7 — extract toLocalISOString to shared/lib/dates + tests
 516a608 refactor(phase-1): step 1.6 — move lib/sessionTiming to entities/session-timing/model
@@ -69,6 +75,11 @@ a1adf4f docs(refactor): add REFACTOR_PLAN.md and REFACTOR_HANDOFF.md
 | 1.6 `lib/sessionTiming.ts` → `entities/session-timing/model.ts` | ✅ | Move du module et de ses tests + 3 fichiers consommateurs mis à jour. `src/lib/` vidé et supprimé. Commit `516a608`, build + tests OK. |
 | 1.7 extract `toLocalISOString` → `shared/lib/dates.ts` + tests | ✅ | Nouvelle fonction isolée dans `shared/lib/dates.ts`, retirée de `cn.ts`, 4 consommateurs repointés (dont `SessionWidget` qui importait mixte). 3 tests ajoutés. Commit `416f117`, 39 tests OK. |
 | 1.8 `shared/hooks/useCloudValue.ts` (non branché) | ✅ | Successeur de `useCloudStorage` construit sur `userDataRepository`. Même API publique (`data/save/saveWith/clear/isReady`). Aucun consommateur branché. Commit `2c91300`, build + tests OK. |
+| 1.9 `PlanningContext` → `useCloudValue` | ✅ | 3 call sites migrés (slots, events, deadlines). Commit `b021bc7`, build + tests OK. Smoke test dev server : boot en 4.6s sans erreur runtime. |
+| 1.10 `StrategyContext` → `useCloudValue` | ✅ | 1 call site migré (`med-pilot-active-strategy`). Commit `ca7df2f`, build + tests OK. |
+| 1.11 `EventContext` → `useCloudValue` | ✅ | 1 call site migré (`med-pilot-events`). Commit `47992cb`, build + tests OK. |
+| 1.12 `EdnCountdown` + `TasksNotes` → `useCloudValue` | ✅ | 4 call sites dans `HomeView.tsx` (EDN_DATE, TASKS, NOTES_V2, NOTES v1 read-only). Mock `@/hooks/useCloudStorage` → `@/shared/hooks/useCloudValue` dans `TasksNotes.test.tsx`. Commit `44c8b75`, build + tests OK. |
+| 1.13 `useSessionTimingStorage` → `userDataRepository` | ✅ | Hook réécrit : suppression de `createClient`/`useRef(createClient)`, 3 appels Supabase (select/upsert/delete) remplacés par `userDataRepository.get/set/remove`. Test refondu avec `vi.hoisted` pour mocker le repository. API publique du hook inchangée. Commit `00bf415`, build + tests OK. |
 
 ### Phases 2 à 8
 
@@ -90,17 +101,25 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochain lot à exécuter — **Lot C (étapes 1.9 → 1.10 + smoke test)**
+## 4. Prochain lot à exécuter — **Lot E (étape 1.14)**
 
 Le user a imposé un découpage par lots courts avec stop/rapport entre chaque lot. Voir §5 pour la séquence complète de Phase 1.
 
-### Lot C — 2 étapes + smoke test obligatoire, premier lot qui BRANCHE un consommateur
+### Lot E — 1 étape, suppression conditionnelle du legacy hook
 
 - **Contenu** :
-  - 1.9 : migrer `PlanningContext` de `useCloudStorage` vers `useCloudValue` (3 clés planning : slots, events, deadlines).
-  - 1.10 : migrer `StrategyContext` de `useCloudStorage` vers `useCloudValue` (clé `med-pilot-active-strategy`).
-- **Validation attendue** : `npm test` + `npm run build` + **smoke test dev obligatoire** (créer événement planning, modifier stratégie, rafraîchir la page, vérifier que les données sont bien persistées et rechargées depuis Supabase).
-- **Stop** : rapport précis au user avant de passer au Lot D. Si smoke test échoue → revert de l'étape concernée et redémarrage.
+  - 1.14 : vérifier qu'aucun import `@/hooks/useCloudStorage` ne subsiste dans `src/`. Si c'est le cas, **supprimer `src/hooks/useCloudStorage.ts`**. Sinon, lister les fichiers qui l'importent encore et reporter la suppression.
+- **Blocage connu** : `ErrorPanel.tsx` et `AnkiExport.tsx` (simulation) utilisent encore `useCloudStorage`. Ils sont hors scope Phase 1 — leur migration est prévue en Phase 7 (étapes 7.9 et 7.10 du `REFACTOR_PLAN.md`). Le prompt 1.14 prévoit ce cas : listing au lieu de suppression.
+- **Validation attendue** : `npm test` + `npm run build` + smoke test si suppression effective.
+
+### Smoke test Lots C + D (encore à faire manuellement par le user)
+
+Les étapes 1.9 → 1.13 ont toutes passé build + tests automatiques (39 tests, 0 échec). Le smoke test manuel reste à effectuer sur le dev server :
+- Planning : créer événement one-off, slot récurrent, deadline → refresh → persistance OK
+- Strategy : modifier puis refresh → persistance OK
+- Agenda (`EventContext`) : créer un event → refresh → persistance OK
+- Home : modifier date EDN, créer task, écrire note → refresh → persistance OK
+- Session timing : démarrer puis compléter une session → vérifier `WeeklyTracker` et `med-pilot-session-timing` en Supabase
 
 ---
 
@@ -215,3 +234,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-15 | Claude (session initiale) | Création du document. Phase 0 terminée + pré-Phase-1. Prêt pour Lot A. |
 | 2026-04-15 | Codex | Lot A terminé : étapes 1.1 et 1.2 validées. Prochain lot : B (1.3 → 1.8). |
 | 2026-04-17 | Claude (session interactive) | Lot B terminé : étapes 1.3 à 1.8 validées (6 commits atomiques). Build + 39 tests OK. `src/lib/` supprimé. `shared/hooks/useCloudValue.ts` créé mais pas encore branché aux consommateurs. Prochain lot : C (1.9 → 1.10 + smoke test). |
+| 2026-04-18 | Claude (session interactive) | Lots C et D enchaînés sur autorisation conditionnée aux tests. 5 commits atomiques (1.9 → 1.13). Build + 39 tests OK à chaque étape. `PlanningContext`, `StrategyContext`, `EventContext`, `EdnCountdown`, `TasksNotes` migrés sur `useCloudValue`. `useSessionTimingStorage` refondé sur `userDataRepository` (tests ré-écrits avec `vi.hoisted`). `useCloudStorage` encore utilisé par `ErrorPanel` + `AnkiExport` (scope Phase 7). Prochain lot : E (1.14). |
