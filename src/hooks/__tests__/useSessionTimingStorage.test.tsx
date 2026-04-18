@@ -4,32 +4,20 @@ import userEvent from "@testing-library/user-event";
 import { useSessionTimingStorage } from "@/hooks/useSessionTimingStorage";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const getUserMock = vi.fn();
-const maybeSingleMock = vi.fn();
-const upsertMock = vi.fn();
-const deleteMock = vi.fn();
+const { getMock, setMock, removeMock, batchGetMock } = vi.hoisted(() => ({
+  getMock: vi.fn(),
+  setMock: vi.fn(),
+  removeMock: vi.fn(),
+  batchGetMock: vi.fn(),
+}));
 
-vi.mock("@/utils/supabase/client", () => ({
-  createClient: () => ({
-    auth: {
-      getUser: getUserMock,
-    },
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          eq: () => ({
-            maybeSingle: maybeSingleMock,
-          }),
-        }),
-      }),
-      upsert: upsertMock,
-      delete: () => ({
-        eq: () => ({
-          eq: deleteMock,
-        }),
-      }),
-    }),
-  }),
+vi.mock("@/shared/api/userDataRepository", () => ({
+  userDataRepository: {
+    get: getMock,
+    set: setMock,
+    remove: removeMock,
+    batchGet: batchGetMock,
+  },
 }));
 
 function makeEntry(id: string, chapterId: string, date: string) {
@@ -76,10 +64,10 @@ function Probe({
 describe("useSessionTimingStorage", () => {
   beforeEach(() => {
     localStorage.clear();
-    getUserMock.mockResolvedValue({ data: { user: null } });
-    maybeSingleMock.mockResolvedValue({ data: null });
-    upsertMock.mockResolvedValue({ error: null });
-    deleteMock.mockResolvedValue({ error: null });
+    getMock.mockResolvedValue(null);
+    setMock.mockResolvedValue(undefined);
+    removeMock.mockResolvedValue(undefined);
+    batchGetMock.mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -110,12 +98,7 @@ describe("useSessionTimingStorage", () => {
       "med-pilot-session-timing",
       JSON.stringify([makeEntry("task-1", "chapter-1", "2026-04-01")]),
     );
-    getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    maybeSingleMock.mockResolvedValue({
-      data: {
-        data_value: [makeEntry("task-2", "chapter-2", "2026-04-02")],
-      },
-    });
+    getMock.mockResolvedValue([makeEntry("task-2", "chapter-2", "2026-04-02")]);
 
     render(<Probe name="merged" />);
 
@@ -126,12 +109,14 @@ describe("useSessionTimingStorage", () => {
       );
     });
 
-    expect(upsertMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        user_id: "user-1",
-        data_key: "med-pilot-session-timing",
-      }),
-      { onConflict: "user_id,data_key" },
-    );
+    await waitFor(() => {
+      expect(setMock).toHaveBeenCalledWith(
+        "med-pilot-session-timing",
+        expect.arrayContaining([
+          expect.objectContaining({ chapterId: "chapter-1" }),
+          expect.objectContaining({ chapterId: "chapter-2" }),
+        ]),
+      );
+    });
   });
 });

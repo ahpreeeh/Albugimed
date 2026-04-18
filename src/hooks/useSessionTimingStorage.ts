@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { userDataRepository } from "@/shared/api/userDataRepository";
 import {
   areSessionTimingEntriesEqual,
   mergeSessionTimingEntries,
@@ -60,7 +60,6 @@ function dispatchSync(entries: SessionTimingEntry[]) {
 export function useSessionTimingStorage(): SessionTimingStorageResult {
   const [data, setData] = useState<SessionTimingEntry[]>(() => readLocalEntries());
   const [isReady, setIsReady] = useState(false);
-  const supabase = useRef(createClient()).current;
   const dataRef = useRef<SessionTimingEntry[]>(data);
 
   const setDataIfChanged = useCallback((next: SessionTimingEntry[]) => {
@@ -71,23 +70,12 @@ export function useSessionTimingStorage(): SessionTimingStorageResult {
   const persistToCloud = useCallback(
     async (entries: SessionTimingEntry[]) => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          return;
-        }
-
-        await supabase.from("user_data").upsert(
-          { user_id: user.id, data_key: STORAGE_KEY, data_value: entries },
-          { onConflict: "user_id,data_key" },
-        );
+        await userDataRepository.set(STORAGE_KEY, entries);
       } catch (err) {
         console.warn(`[useSessionTimingStorage] Save échoué pour "${STORAGE_KEY}"`, err);
       }
     },
-    [supabase],
+    [],
   );
 
   useEffect(() => {
@@ -109,26 +97,17 @@ export function useSessionTimingStorage(): SessionTimingStorageResult {
       const localEntries = readLocalEntries();
 
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const cloudValue = await userDataRepository.get<SessionTimingEntry[]>(STORAGE_KEY);
 
-        if (!user) {
+        // Pas de valeur cloud (user non connecté ou clé absente) : on reste sur le local.
+        if (cloudValue === null) {
           if (!cancelled) {
             setDataIfChanged(localEntries);
-            setIsReady(true);
           }
           return;
         }
 
-        const { data: row } = await supabase
-          .from("user_data")
-          .select("data_value")
-          .eq("user_id", user.id)
-          .eq("data_key", STORAGE_KEY)
-          .maybeSingle();
-
-        const cloudEntries = normalizeSessionTimingEntries(row?.data_value ?? []);
+        const cloudEntries = normalizeSessionTimingEntries(cloudValue);
         const mergedEntries = mergeSessionTimingEntries(localEntries, cloudEntries);
 
         if (!cancelled) {
@@ -156,7 +135,7 @@ export function useSessionTimingStorage(): SessionTimingStorageResult {
     return () => {
       cancelled = true;
     };
-  }, [persistToCloud, setDataIfChanged, supabase]);
+  }, [persistToCloud, setDataIfChanged]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -225,23 +204,11 @@ export function useSessionTimingStorage(): SessionTimingStorageResult {
     }
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        return;
-      }
-
-      await supabase
-        .from("user_data")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("data_key", STORAGE_KEY);
+      await userDataRepository.remove(STORAGE_KEY);
     } catch (err) {
       console.warn(`[useSessionTimingStorage] Clear échoué pour "${STORAGE_KEY}"`, err);
     }
-  }, [setDataIfChanged, supabase]);
+  }, [setDataIfChanged]);
 
   return { data, save, saveWith, clear, isReady };
 }
