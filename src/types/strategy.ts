@@ -1,44 +1,23 @@
-// ─── Strategy Types ──────────────────────────────────────────────────
-// Defines the long-term study strategy (mode, targets, deadlines).
-// The day-load (plancher/standard/plafond) is NOT here — it's a daily
-// choice made on the Session Widget.
+// ─── Strategy Types — BC re-export ───────────────────────────────
+// Cette source est une façade de compat. Les types et constantes vivent
+// désormais dans entities/strategy/types. createEmptyStrategy sera
+// déplacée vers entities/strategy/model au step 2.8.
+//
+// Ce fichier sera supprimé au step 2.10 après migration des 7 consommateurs.
 
-export type StrategyMode = 'preparation' | 'rush' | 'vacances';
+export type {
+    StrategyMode,
+    VacationObjective,
+    LearningScope,
+    DayLoad,
+    ActiveStrategy,
+} from '@/entities/strategy/types';
 
-export type VacationObjective = 'revision' | 'apprentissage';
-export type LearningScope = 'coeur' | 'elargissement';
+export { DUREES } from '@/entities/strategy/types';
 
-export type DayLoad = 'plancher' | 'standard' | 'plafond';
+import type { ActiveStrategy } from '@/entities/strategy/types';
 
-export interface ActiveStrategy {
-    mode: StrategyMode;
-    // --- Preparation fields ---
-    preparationSubjectIds: string[];        // multi-select
-    preparationDeadline: string | null;     // ISO date
-
-    // --- Rush fields ---
-    rushSubjectIds: string[];               // multi-select
-
-    // --- Vacances fields ---
-    vacancesObjectif: VacationObjective | null;
-    vacancesSubjectIds: string[];           // multi-select
-    vacancesDuree: string | null;           // e.g. '1w', '2w', '1m', '2m'
-    vacancesPerimetre: LearningScope | null;
-
-    // --- Meta ---
-    createdAt: number;                      // timestamp ms
-}
-
-export const DUREES = [
-    { value: '1w', label: '1 semaine' },
-    { value: '2w', label: '2 semaines' },
-    { value: '3w', label: '3 semaines' },
-    { value: '1m', label: '1 mois' },
-    { value: '6w', label: '6 semaines' },
-    { value: '2m', label: '2 mois' },
-    { value: '3m', label: '3 mois' },
-] as const;
-
+// createEmptyStrategy reste inline jusqu'au step 2.8 (move vers model.ts).
 export function createEmptyStrategy(): ActiveStrategy {
     return {
         mode: 'preparation',
