@@ -2,7 +2,7 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-20 (Phase 3 en cours — steps 3.1 à 3.6 validés, stop avant Q)
+**Dernière mise à jour** : 2026-04-20 (Phase 3 en cours — step 3.7 codé, smoke test Q requis)
 **Mise à jour par** : Codex (session interactive, audit + reprise semi-autonome)
 
 ---
@@ -138,8 +138,9 @@ a1adf4f docs(refactor): add REFACTOR_PLAN.md and REFACTOR_HANDOFF.md
 | 3.4 `entities/session/api.ts` + tests | ✅ | `src/entities/session/api.ts` + `src/entities/session/__tests__/api.test.ts` créés, `med-pilot-daily-session` ajouté à `STORAGE_KEYS.session.daily`, commit `143b04e`, build + tests OK |
 | 3.5 `entities/session/store.ts` + tests | ✅ | Store Zustand dormant ajouté avec `hydrate/generate/start/complete/skip/clear/setSession` + tests. Deux bugs critiques corrigés avant commit : réhydratation laissant un état mémoire obsolète, et course asynchrone pouvant perdre des entrées d'historique. Commit `147bff8`. Build + 142 tests OK. |
 | 3.6 `entities/session/hooks.ts` selectors | ✅ | `useDailySession`, `useCurrentTask`, `useAllDone`, `useTotalElapsed`, `useHasSessionToday`, `useSessionActions`, `useSessionHydrated`, `useSessionHistory` ajoutés. Fichier dormant tant que `SessionEngineContext` n'importe rien depuis `entities/session`. Build + 142 tests OK. |
+| 3.7 façade `SessionEngineContext` sur Zustand | ⚠️ code OK, smoke requis | `src/context/SessionEngineContext.tsx` réécrit en façade temporaire lisant le store Zustand, API publique inchangée pour les consommateurs. `npm test` + `npm run build` OK. **Smoke test utilisateur obligatoire avant de considérer l'étape validée.** |
 
-**État** : les lots L, M, N, O et P sont désormais couverts. Le store et ses selectors restent **dormants** : aucun consommateur n'a encore basculé dessus, donc pas de smoke user requis jusqu'ici. Voir §5c pour le tableau détaillé. **Prochain lot recommandé : Q**, avec smoke test obligatoire.
+**État** : les lots L, M, N, O et P sont validés. Le lot Q est **codé et compilé**, mais pas encore validé produit : `SessionEngineContext` lit désormais le store Zustand et la persistance réelle a basculé. **Stop obligatoire ici** jusqu'au smoke test utilisateur du lot Q.
 
 ---
 
@@ -157,25 +158,36 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochain lot à exécuter — **Lot Q (Phase 3, façade `SessionEngineContext`)**
+## 4. Prochaine action à exécuter — **Smoke test utilisateur du Lot Q**
 
-Phase 2 **validée** (10 étapes, 2 smoke tests user OK). La **Phase 3** a déjà franchi ses fondations pures et son store dormant (`3.1` → `3.5`). Aucun consommateur n'a encore été basculé : le risque produit reste faible tant que `SessionEngineContext.tsx` continue de porter le comportement réel.
+Phase 2 **validée** (10 étapes, 2 smoke tests user OK). La **Phase 3** a franchi ses fondations pures et le flip-switch `Q` a été codé : `SessionEngineContext.tsx` est maintenant une façade sur Zustand, sans changement d'API côté consommateurs.
 
-**Asymétrie à exploiter** : les fondations pures et dormantes sont terminées (`L` → `P`). À partir de `Q`, la persistance réelle et le comportement utilisateur changent → smoke tests obligatoires.
+**Point de contrôle** : à partir de `Q`, la persistance réelle et le comportement utilisateur peuvent changer malgré une API stable. Aucun lot suivant ne doit démarrer avant validation manuelle.
 
-### Lot Q — Façade `SessionEngineContext` sur Zustand (step 3.7)
+### Smoke test Q — Façade `SessionEngineContext` sur Zustand (step 3.7 déjà codé)
 
 Risque : **moyen**. Premier flip-switch réel de la Phase 3.
 
 | Step | Action | Fichiers |
 |---|---|---|
-| 3.7 | Réécrire `src/context/SessionEngineContext.tsx` en façade lisant le store Zustand et exposant l'API historique (`session`, `generateSession`, `startCurrentTask`, `completeCurrentTask`, `skipCurrentTask`, `currentTask`, `currentTaskIndex`, `allDone`, `totalElapsedMs`, `hasSessionToday`). Aucun consommateur ne change encore, mais la persistance réelle bascule vers le store. | `src/context/SessionEngineContext.tsx` |
+| 3.7 | `src/context/SessionEngineContext.tsx` a été réécrit en façade lisant le store Zustand et exposant l'API historique (`session`, `generateSession`, `startCurrentTask`, `completeCurrentTask`, `skipCurrentTask`, `currentTask`, `currentTaskIndex`, `allDone`, `totalElapsedMs`, `hasSessionToday`). Aucun consommateur n'a changé, mais la persistance réelle a basculé vers le store. | `src/context/SessionEngineContext.tsx` |
 
-**Vérification Lot Q** : `npm test` vert, `npm run build` vert, puis **smoke test utilisateur obligatoire** : login → démarrer une session → compléter une tâche → refresh → timer + progression + persistance OK.
+**Vérification Q déjà faite côté code** : `npm test` vert, `npm run build` vert.
+
+**Smoke test utilisateur obligatoire maintenant** :
+- login avec un compte de test
+- ouvrir le cockpit avec une stratégie déjà configurée
+- générer une session du jour si nécessaire
+- démarrer la tâche courante puis vérifier que le timer tourne
+- compléter une tâche avec un rating puis vérifier que la progression sujet est mise à jour
+- rafraîchir la page et vérifier que la session du jour est restaurée
+- vérifier que l'avancement visible et le temps total restent cohérents après refresh
 
 ### Prochaine phase logique
 
-Après Lot Q → soit validation smoke et Lot R, soit rollback immédiat de Q si régression silencieuse.
+Après smoke Q :
+- si OK → prochain lot = `R`
+- si KO → rollback immédiat du commit Q uniquement
 
 ---
 
@@ -375,4 +387,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-18 | Claude (session interactive) | Lot E : étape 1.14 exécutée selon le plan. Grep : 2 importeurs subsistent (`ErrorPanel.tsx`, `AnkiExport.tsx`). Conformément au prompt (`si importeurs restants, liste-les, ne supprime pas`), **`src/hooks/useCloudStorage.ts` conservé**. Build final + 39 tests OK. Suppression reportée à après Phase 7 (étapes 7.9 + 7.10 migreront ces 2 derniers consommateurs). Smoke test programmatique OK (HTTP /login 200, middleware OK, 0 erreur logs). Smoke test UI authentifié à faire par le user. |
 | 2026-04-19 | Claude (session interactive) | **Phase 1 validée** côté utilisateur (smoke test OK : modifs dans l'app, pas de crash, sauvegarde Supabase OK). Tag `phase-1-done` posé sur `e853cac`. **Phase 2 cadrée** : 10 steps atomiques (2.1 → 2.10) regroupés en 6 lots F→K (voir §5b). Lot recommandé en priorité : Lot F (Subject foundation, risque zéro). Divergences de clés pré-existantes reportées à Phase 3 (voir §7 "À surveiller"). Prochain lot : Lot F. |
 | 2026-04-20 | Claude (session interactive, semi-autonome souple) | **Phase 2 terminée en une journée** : 10 steps / 10 commits code + 1 commit docs. Lots F → K exécutés dans l'ordre strict, smoke tests user OK après H et K. Tag `phase-2-done` posé sur `94b83d3`. Tests 39 → 62 (+12 Subject, +12 Strategy, 0 régression). Build 79.6 kB middleware inchangé. 25 imports migrés vers `entities/subject/*` et `entities/strategy/*`. `src/types/strategy.ts` supprimé. Mini-surprise gérée : 1 référence relative `./strategy` dans `src/types/session.ts` que le grep alias-only avait manquée, corrigée au step 2.10. **Phase 3 cadrée** : 7 lots L→R (voir §5c). Chainables autonomement (pures additions) : L+M+N+O+P. Stop obligatoire avant Q (flip switch persistance). Prochain lot : Lot L. |
-| 2026-04-20 | Codex | Audit + reprise Phase 3. État réel resynchronisé avec le dépôt : steps 3.1 à 3.4 déjà commités (`633ac86`, `f0482f8`, `ce66928`, `143b04e`). Step 3.5 commit `147bff8` : store Zustand dormant + tests renforcés. Deux bugs critiques corrigés avant commit : réhydratation qui conservait un état mémoire obsolète et course asynchrone pouvant perdre des entrées d'historique. Step 3.6 ajouté dans la foulée : selectors Zustand dormants (`entities/session/hooks.ts`). Build + 142 tests OK. Stop avant Q, smoke utilisateur indispensable. |
+| 2026-04-20 | Codex | Audit + reprise Phase 3. État réel resynchronisé avec le dépôt : steps 3.1 à 3.4 déjà commités (`633ac86`, `f0482f8`, `ce66928`, `143b04e`). Step 3.5 commit `147bff8` : store Zustand dormant + tests renforcés. Deux bugs critiques corrigés avant commit : réhydratation qui conservait un état mémoire obsolète et course asynchrone pouvant perdre des entrées d'historique. Step 3.6 commit `7c86fa1` : selectors Zustand dormants (`entities/session/hooks.ts`). Step 3.7 codé : `SessionEngineContext.tsx` devient façade sur Zustand, API publique conservée, build + 142 tests OK. **Stop ici en attente du smoke test utilisateur du lot Q** avant tout passage au lot R. |
