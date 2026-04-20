@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
     active: "med-pilot-active-strategy",
   },
   session: {
+    daily: "med-pilot-daily-session",
     history: "med-pilot-session-history",
     timing: "med-pilot-session-timing",
   },

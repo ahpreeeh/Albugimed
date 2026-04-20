@@ -50,6 +50,22 @@ export interface DailySession {
     generatedAt: number;            // timestamp ms
 }
 
+/**
+ * A single entry in the session history log.
+ * Appended each time a task is completed (cf. applyTaskCompletion flow).
+ */
+export interface SessionHistoryEntry {
+    /** Local ISO date (YYYY-MM-DD) */
+    date: string;
+    taskType: SessionTaskType;
+    reason: SessionReason;
+    subjectTitle: string;
+    chapterTitle: string;
+    /** Duration in milliseconds between `startedAt` and `completedAt` (0 if no timing) */
+    durationMs: number;
+    difficultyRating: DifficultyRating;
+}
+
 /** Returns a human-readable label for a reason */
 export function reasonLabel(reason: SessionReason): string {
     switch (reason) {

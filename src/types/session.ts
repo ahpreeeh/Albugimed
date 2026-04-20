@@ -14,6 +14,7 @@ export type {
     DifficultyRating,
     SessionTask,
     DailySession,
+    SessionHistoryEntry,
 } from '@/entities/session/types';
 
 export {
