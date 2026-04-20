@@ -5,11 +5,11 @@ import {
     Play, Square, ArrowRight, SkipForward, Settings2,
     Clock, Zap, Target, CheckCircle2, Trophy, Pause,
 } from 'lucide-react';
-import { useStrategy } from '@/context/StrategyContext';
+import { useStrategy } from '@/entities/strategy/hooks';
 import { useSessionEngine } from '@/context/SessionEngineContext';
 import { StrategyModal } from './StrategyModal';
 import { useSessionTimingStorage } from '@/hooks/useSessionTimingStorage';
-import type { DayLoad } from '@/types/strategy';
+import type { DayLoad } from '@/entities/strategy/types';
 import type { DifficultyRating } from '@/types/session';
 import { reasonLabel, taskTypeLabel, reasonBadgeClass, difficultyColor } from '@/types/session';
 import { cn } from '@/shared/lib/cn';

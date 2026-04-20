@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useCallback, ReactNode } from 'react';
-import type { ActiveStrategy } from '@/types/strategy';
+import type { ActiveStrategy } from '@/entities/strategy/types';
 import { isValidStrategy } from '@/entities/strategy/model';
 import { useCloudValue } from '@/shared/hooks/useCloudValue';
 

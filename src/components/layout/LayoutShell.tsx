@@ -6,7 +6,7 @@ import { ViewProvider } from '@/context/ViewContext';
 import { SubjectProvider } from '@/entities/subject/hooks';
 import { EventProvider } from '@/context/EventContext';
 import { PlanningProvider } from '@/context/PlanningContext';
-import { StrategyProvider } from '@/context/StrategyContext';
+import { StrategyProvider } from '@/entities/strategy/hooks';
 import { SessionEngineProvider } from '@/context/SessionEngineContext';
 import { MigrationRunner } from '@/components/features/migration/MigrationRunner';
 import { createClient } from '@/utils/supabase/client';

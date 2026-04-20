@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { useSubjects } from '@/entities/subject/hooks';
-import { useStrategy } from '@/context/StrategyContext';
+import { useStrategy } from '@/entities/strategy/hooks';
 import type { Subject, Chapter, ChapterProgress } from '@/entities/subject/hooks';
-import type { ActiveStrategy } from '@/types/strategy';
-import type { DayLoad } from '@/types/strategy';
+import type { ActiveStrategy } from '@/entities/strategy/types';
+import type { DayLoad } from '@/entities/strategy/types';
 import type {
     DailySession, SessionTask, SessionReason, DifficultyRating,
 } from '@/types/session';

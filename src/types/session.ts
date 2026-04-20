@@ -1,7 +1,7 @@
 // ─── Session Engine Types ────────────────────────────────────────────
 // Defines the daily session model: task queue, statuses, timing.
 
-import type { DayLoad } from './strategy';
+import type { DayLoad } from '@/entities/strategy/types';
 
 /** What kind of work a session task represents */
 export type SessionTaskType = 'cours' | 'annale';

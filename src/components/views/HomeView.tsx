@@ -16,7 +16,7 @@ import { useView } from "@/context/ViewContext";
 
 import { cn } from "@/shared/lib/cn";
 import type { ErrorEntry } from "@/types";
-import type { ActiveStrategy } from "@/types/strategy";
+import type { ActiveStrategy } from "@/entities/strategy/types";
 import { SessionWidget } from "@/components/features/session/SessionWidget";
 
 import { WeeklyTracker } from "@/components/features/tracking/WeeklyTracker";

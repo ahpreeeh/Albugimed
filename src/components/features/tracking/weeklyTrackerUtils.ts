@@ -5,7 +5,7 @@ import {
   mergeSessionTimingEntries,
 } from "@/entities/session-timing/model";
 import { toLocalISOString } from "@/shared/lib/dates";
-import type { ActiveStrategy } from "@/types/strategy";
+import type { ActiveStrategy } from "@/entities/strategy/types";
 
 export type WeeklyTrackerDay = {
   day: string;

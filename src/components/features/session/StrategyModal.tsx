@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Settings2, Calendar as CalendarIcon, X, Check, Info } from 'lucide-react';
 import { useSubjects } from '@/entities/subject/hooks';
-import { useStrategy } from '@/context/StrategyContext';
-import type { StrategyMode, VacationObjective, LearningScope, ActiveStrategy } from '@/types/strategy';
-import { DUREES, createEmptyStrategy } from '@/types/strategy';
+import { useStrategy } from '@/entities/strategy/hooks';
+import type { StrategyMode, VacationObjective, LearningScope, ActiveStrategy } from '@/entities/strategy/types';
+import { DUREES } from '@/entities/strategy/types';
+import { createEmptyStrategy } from '@/entities/strategy/model';
 import { cn } from '@/shared/lib/cn';
 
 interface StrategyModalProps {
