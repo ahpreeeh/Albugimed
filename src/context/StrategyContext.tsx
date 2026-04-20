@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useCallback, ReactNode } from 'react';
 import type { ActiveStrategy } from '@/types/strategy';
+import { isValidStrategy } from '@/entities/strategy/model';
 import { useCloudValue } from '@/shared/hooks/useCloudValue';
 
 // ─── Storage key ─────────────────────────────────────────────────────
@@ -24,13 +25,12 @@ export const StrategyProvider = ({ children }: { children: ReactNode }) => {
         null,
     );
 
-    // Guard : rejeter les stratégies avec l'ancien schéma (pre-refactor)
-    const strategy: ActiveStrategy | null =
-        rawStrategy &&
-        rawStrategy.mode &&
-        Array.isArray(rawStrategy.preparationSubjectIds)
-            ? rawStrategy
-            : null;
+    // Guard : rejeter les stratégies avec l'ancien schéma (pre-refactor).
+    // Sémantique extraite vers entities/strategy/model.isValidStrategy (step 2.8+)
+    // et couverte par 10 tests unitaires.
+    const strategy: ActiveStrategy | null = isValidStrategy(rawStrategy)
+        ? rawStrategy
+        : null;
 
     const setStrategy = useCallback(
         (s: ActiveStrategy) => save(s),
