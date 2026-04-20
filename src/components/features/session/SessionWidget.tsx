@@ -128,7 +128,14 @@ export const SessionWidget = () => {
     const totalElapsedMs = useTotalElapsed();
     const today = toLocalISOString(new Date());
     const hasSessionToday = useHasSessionToday(today);
-    const { hydrate, generateSession: generateStoreSession, startTask, completeTask, skipTask } = useSessionActions();
+    const {
+        hydrate,
+        generateSession: generateStoreSession,
+        startTask,
+        completeTask,
+        skipTask,
+        clearSession,
+    } = useSessionActions();
 
     const [strategieOpen, setStrategieOpen] = useState(false);
     const [showRating, setShowRating] = useState(false);
@@ -210,6 +217,14 @@ export const SessionWidget = () => {
         if (!currentTask) return;
         skipTask(currentTask.id);
     }, [currentTask, skipTask]);
+
+    const handleResetTodaySession = useCallback(() => {
+        const confirmed = window.confirm(
+            "Réinitialiser uniquement la session du jour ? L'historique, les matières, la stratégie et le timing resteront inchangés.",
+        );
+        if (!confirmed) return;
+        clearSession();
+    }, [clearSession]);
 
     // Progress bar
     const progress = useMemo(() => {
@@ -320,6 +335,12 @@ export const SessionWidget = () => {
                         <p className="text-[10px] text-[var(--color-text-muted)]">
                             Temps total : {formatTime(totalElapsedMs)}
                         </p>
+                        <button
+                            onClick={handleResetTodaySession}
+                            className="app-btn-ghost mx-auto text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                        >
+                            Réinitialiser la session du jour
+                        </button>
                     </div>
                 )}
 
