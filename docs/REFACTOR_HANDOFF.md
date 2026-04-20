@@ -2,8 +2,8 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-19 (Phase 1 validée côté pratique — smoke user OK, Phase 2 cadrée en 6 lots)
-**Mise à jour par** : Claude (session interactive)
+**Dernière mise à jour** : 2026-04-20 (Phase 2 validée — smoke user OK, Phase 3 cadrée en 7 lots)
+**Mise à jour par** : Claude (session interactive, mode semi-autonome souple)
 
 ---
 
@@ -14,16 +14,30 @@
 | Branche courante | `refactor/architecture-v2` |
 | Base | `main` |
 | Tag de rollback | `backup/pre-refactor-v2` (HEAD pristine de `main` avant tout refactor) |
-| Tag fin Phase 1 | `phase-1-done` sur `e853cac` (point de rollback propre avant Phase 2) |
-| HEAD de la branche refactor | `e853cac` (step 1.14, voir `git log --oneline -20`) |
+| Tag fin Phase 1 | `phase-1-done` sur `e853cac` |
+| Tag fin Phase 2 | `phase-2-done` sur `94b83d3` |
+| HEAD de la branche refactor | `94b83d3` (step 2.10, voir `git log --oneline -20`) |
 | Remote push | **non pushé** — tout est local |
-| Tests | 6 fichiers / 39 tests / 0 échec |
-| Build Next.js | ✅ OK (6 routes statiques, middleware 79.6 kB) |
-| Smoke test Phase 1 | ✅ validé par le user (modifs dans l'app, pas de crash, sauvegarde Supabase OK) |
+| Tests | 9 fichiers / 62 tests / 0 échec |
+| Build Next.js | ✅ OK (6 routes statiques, middleware 79.6 kB — inchangé depuis Phase 1) |
+| Smoke test Phase 1 | ✅ validé 2026-04-19 (modifs dans l'app, pas de crash, sauvegarde Supabase OK) |
+| Smoke test Phase 2 Lot H | ✅ validé 2026-04-20 (SubjectContext migré sur api.ts, persistance OK) |
+| Smoke test Phase 2 Lot K | ✅ validé 2026-04-20 (Strategy migrée, recharge + modification OK) |
 
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+94b83d3 refactor(phase-2): step 2.10 — migrate Strategy consumers + delete types/strategy.ts
+54a775c refactor(phase-2): step 2.9 — Strategy hooks facade + wire isValidStrategy
+2ca82e1 refactor(phase-2): step 2.8 — add Strategy model + materialize isValidStrategy guard
+e56cdcd refactor(phase-2): step 2.7 — extract Strategy types to entities/strategy/types
+7d31f70 refactor(phase-2): step 2.6 — migrate Subject consumers to entities facade
+233e117 refactor(phase-2): step 2.5 — add entities/subject/hooks.ts facade
+4da9ea9 refactor(phase-2): step 2.4 — migrate SubjectContext to entities/subject/api
+0ead8e5 refactor(phase-2): step 2.3 — add entities/subject/api (dormant façade on userDataRepository)
+1859117 refactor(phase-2): step 2.2 — extract createDefaultProgress + add computeProgress to entities/subject/model
+d824f19 refactor(phase-2): step 2.1 — extract Subject types to entities/subject/types
+dba04ed docs(refactor): validate Phase 1 + plan Phase 2 lots
 e853cac refactor(phase-1): step 1.14 — verify deletion blocker, keep useCloudStorage.ts
 d869f55 docs(refactor): update handoff after Lots C + D (steps 1.9 → 1.13 done)
 00bf415 refactor(phase-1): step 1.13 — migrate useSessionTimingStorage to userDataRepository
@@ -88,13 +102,30 @@ a1adf4f docs(refactor): add REFACTOR_PLAN.md and REFACTOR_HANDOFF.md
 
 **Clôture Phase 1** : smoke test utilisateur validé le 2026-04-19 (modifs dans l'app OK, pas de crash, sauvegarde Supabase OK). Tag `phase-1-done` posé sur `e853cac`. 14 étapes / 13 commits code + 2 commits docs. **Phase 1 considérée terminée** malgré 1.14 conditionnellement reportée (scope Phase 7).
 
-### Phases 3 à 8
+### Phase 2 — Entities layer `subject` + `strategy`
+
+| Étape | Statut | Preuve |
+|---|---|---|
+| 2.1 types Subject | ✅ | `src/entities/subject/types.ts` + re-export depuis `SubjectContext`. Commit `d824f19`. |
+| 2.2 model Subject + tests | ✅ | `createDefaultProgress` déplacé, `computeProgress` ajoutée, 6 tests. Commit `1859117`. |
+| 2.3 api Subject (dormant) | ✅ | `loadSubjects/saveSubjects` via `userDataRepository`, 5 tests `vi.hoisted`. Commit `0ead8e5`. |
+| 2.4 SubjectContext → api | ✅ | `createClient` retiré, `loadFromCloud`/`persist` délèguent à `api.ts`. Commit `4da9ea9`. Smoke user OK. |
+| 2.5 facade Subject hooks | ✅ | `src/entities/subject/hooks.ts`, 28 lig. Commit `233e117`. |
+| 2.6 migrate 12 consumers Subject | ✅ | 14 lignes sedées (HomeView + SessionEngineContext : 2 chacun). Commit `7d31f70`. |
+| 2.7 types Strategy | ✅ | `src/entities/strategy/types.ts` (types + DUREES), `src/types/strategy.ts` devient BC shim. Commit `e56cdcd`. |
+| 2.8 model Strategy + tests | ✅ | `createEmptyStrategy` déplacé + nouveau prédicat `isValidStrategy` (10 cas couverts). 12 tests. Commit `2ca82e1`. |
+| 2.9 wire isValidStrategy | ✅ | Guard inline L27-33 de `StrategyContext` remplacée par `isValidStrategy(rawStrategy)`. Sémantique strictement identique. Commit `54a775c`. |
+| 2.10 migrate Strategy + delete types/strategy | ✅ | 5 Context consumers + 8 types consumers + 1 fix relatif (`./strategy` dans `types/session.ts`). `src/types/strategy.ts` supprimé. Commit `94b83d3`. Smoke user OK. |
+
+**Clôture Phase 2** : smoke tests utilisateur validés le 2026-04-20 (après Lot H et après Lot K). Tag `phase-2-done` posé sur `94b83d3`. 10 steps atomiques / 10 commits code + 1 commit docs. 62 tests verts.
+
+### Phases 4 à 8
 
 **Non commencées.** Voir `REFACTOR_PLAN.md` pour le détail.
 
-### Phase 2 — Entities layer `subject` + `strategy`
+### Phase 3 — Session Engine refactor
 
-**État** : cadrée en 6 lots (F → K, 10 steps atomiques 2.1 → 2.10). Voir §5b pour le tableau détaillé. **Lot recommandé en priorité : Lot F** (Subject foundation, risque zéro). Exécution non commencée.
+**État** : cadrée en 7 lots (L → R, 8 steps atomiques 3.1 → 3.8). Voir §5c pour le tableau détaillé. **Lot recommandé en priorité : Lot L** (install zustand + move types, risque zéro). Ajoute la dépendance `zustand`.
 
 ---
 
@@ -112,26 +143,26 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochain lot à exécuter — **Lot F (Phase 2, Subject foundation)**
+## 4. Prochain lot à exécuter — **Lot L (Phase 3, Session Engine setup)**
 
-Phase 1 est **validée** (13 étapes + 1.14 conditionnellement reportée). Smoke test utilisateur OK. Tag `phase-1-done` posé sur `e853cac`. On démarre la **Phase 2 : Entities layer pour `subject` et `strategy`**.
+Phase 2 **validée** (10 étapes, 2 smoke tests user OK). Tag `phase-2-done` posé sur `94b83d3`. On démarre la **Phase 3 : Session Engine refactor** — c'est le plus gros chantier du refactor (`SessionEngineContext.tsx` 496 lignes → 6 fichiers, ajout `zustand`).
 
-**Asymétrie à exploiter** : `StrategyContext` (59 lig) utilise déjà `useCloudValue` après l'étape 1.10 — **aucun Supabase hand-rolled à nettoyer**. `SubjectContext` (299 lig) conserve encore son hand-rolled Supabase (L106-111 select, L133-145 upsert). → Subject demande 6 steps, Strategy seulement 4.
+**Asymétrie à exploiter** : 3 des 8 steps Phase 3 sont des **pures additions** (types, model, api) sans consommateur touché → Lot L, M, N peuvent être chaînés. Les 4 steps suivants (store Zustand + façade + migration) touchent la persistance réelle → smoke tests obligatoires.
 
-### Lot F — Subject foundation (steps 2.1 + 2.2)
+### Lot L — Setup Phase 3 (steps 3.1 + 3.2)
 
-Risque : **faible**. Pure addition, aucun consommateur touché.
+Risque : **faible**. Pure setup, aucun consommateur touché.
 
-| Step | Action | Fichiers créés | Tests |
-|---|---|---|---|
-| 2.1 | Créer `entities/subject/types.ts` en **copiant** les types de `SubjectContext.tsx` L17-50 (`ChapterStatus`, `ChapterProgress`, `Chapter`, `Subject`). Conserver la compat en ré-exportant depuis `SubjectContext.tsx`. | `src/entities/subject/types.ts` | — |
-| 2.2 | Créer `entities/subject/model.ts` en extrayant `createDefaultProgress()` (L69-81) + ajouter `computeProgress(chapter)` qui dérive `{courseStartedCount, level1Count, fullCount}` pour futurs widgets. `SubjectContext.tsx` ré-importe `createDefaultProgress` depuis le model. | `src/entities/subject/model.ts`, `src/entities/subject/__tests__/model.test.ts` (~60 lig) | ✅ à écrire |
+| Step | Action | Fichiers |
+|---|---|---|
+| 3.1 | `npm install zustand` (nouvelle dépendance). Vérifier que `tsc`, tests et build restent verts. | `package.json`, `package-lock.json` |
+| 3.2 | Créer `entities/session/types.ts` en copiant `src/types/session.ts`. `src/types/session.ts` devient un BC re-export jusqu'à la migration des consommateurs (step 3.8). | `src/entities/session/types.ts`, `src/types/session.ts` (modifié) |
 
-**Vérification Lot F** : `npm test` → 41 tests verts (39 + 2 nouveaux), `npm run build` vert, `git diff src/context/SubjectContext.tsx` montre uniquement des imports modifiés.
+**Vérification Lot L** : `npm test` → 62 tests verts (aucun nouveau), `npm run build` vert, `zustand` présent dans `package.json`.
 
 ### Prochaine phase logique
 
-Après Lot F → Lot G (step 2.3, Subject api.ts). Puis Lot H (2.4, SubjectContext migration — **smoke obligatoire**). Voir §5b pour le plan complet Phase 2.
+Après Lot L → Lot M (step 3.3, extraction du model.ts avec tests TDD **critiques** car ils figent le comportement actuel avant tout réarrangement). Puis Lot N (3.4, api.ts), Lot O (3.5, store Zustand — **moyen, persist hydration**), Lot P (3.6, hooks selectors). Voir §5c pour le plan complet Phase 3.
 
 ---
 
@@ -168,16 +199,57 @@ Imposé par le user pour limiter le blast radius. Chaque lot se termine par un s
 
 **Ordre strict après Lot F** : F → G → H (smoke) → I → J → K (smoke + tag). Ne **PAS** bundler H avec I (mélange risque moyen + find-and-replace = diagnostic difficile en cas de rollback).
 
-### Critères de succès Phase 2
+### Critères de succès Phase 2 (bilan réel)
 
-- [ ] `entities/subject/` et `entities/strategy/` existent avec `types.ts`, `model.ts`, `api.ts` (subject only), `hooks.ts` + `__tests__/`
-- [ ] `SubjectContext.tsx` ne contient plus aucun `supabase.from(...)` direct — tout passe par `api.ts`
-- [ ] `StrategyContext.tsx` utilise `isValidStrategy` de `entities/strategy/model.ts`
-- [ ] `src/types/strategy.ts` supprimé
-- [ ] 12 + 5 + 7 = **24 imports migrés** vers les couches entities
-- [ ] `npm test` passe de 39 → ~50 tests
-- [ ] Tag `phase-2-done` posé
-- [ ] Smoke tests user passés (après Lot H et après Lot K)
+- [x] `entities/subject/` et `entities/strategy/` existent avec `types.ts`, `model.ts`, `api.ts` (subject only), `hooks.ts` + `__tests__/`
+- [x] `SubjectContext.tsx` ne contient plus aucun `supabase.from(...)` direct — tout passe par `api.ts`
+- [x] `StrategyContext.tsx` utilise `isValidStrategy` de `entities/strategy/model.ts`
+- [x] `src/types/strategy.ts` supprimé
+- [x] **25 imports migrés** (12 Subject + 5 Context Strategy + 8 types Strategy + 1 relatif bonus `./strategy` dans `src/types/session.ts`)
+- [x] Tests 39 → **62** (+12 Subject, +12 Strategy ; objectif ~50 dépassé)
+- [x] Tag `phase-2-done` posé
+- [x] Smoke tests user passés (Lot H + Lot K)
+
+---
+
+## 5c. Plan des lots pour la Phase 3
+
+8 steps atomiques (3.1 → 3.8) regroupés en **7 lots**. Phase 3 est le plus gros chantier du refactor (`SessionEngineContext.tsx` : 496 lig → 6 fichiers). Introduit la dépendance `zustand`.
+
+**Stratégie** : les 4 premiers lots (L → P) sont des **pures additions** (aucun consommateur touché, store dormant tant que rien ne l'importe). Peuvent être enchaînés sans smoke intermédiaire. Les 2 derniers (Q, R) flippent les consommateurs vers Zustand → smoke obligatoire à chaque fois.
+
+| Lot | Étapes | Ce qu'il contient | Risque | Smoke |
+|---|---|---|---|---|
+| **L** | 3.1 → 3.2 | `npm install zustand` + `entities/session/types.ts` (move de `src/types/session.ts`, BC shim). Aucun code touché. | faible | non |
+| **M** | 3.3 | `entities/session/model.ts` : copier-coller les fonctions pures de `SessionEngineContext.tsx` (`generateDailyTasks`, `categoriseChapter`, `chapterPriority`, `buildChapterTasks`, `getTargetSubjects`, `getAnnaleLevel`, `applyTaskCompletion`, `computeTotalElapsedMs`, `findCurrentTaskIndex`). **Écrire les tests AVANT réarrangement** (TDD strict pour figer le comportement actuel). Matrix : `categoriseChapter` × 4, `chapterPriority` × tri, `generateDailyTasks` × ~9 scénarios, `applyTaskCompletion` × 2 chemins. ~180 lig code + ~200 lig tests. | faible (pure addition) | non |
+| **N** | 3.4 | `entities/session/api.ts` : `loadDailySession`, `saveDailySession`, `clearDailySession`, `loadSessionHistory`, `appendSessionHistory` via `userDataRepository`. Fichier **dormant** — pas câblé. Tests avec repo mocké. | faible | non |
+| **O** | 3.5 | `entities/session/store.ts` : Zustand + `persist` middleware custom branché sur `userDataRepository` (pas `localStorage` nu). State `{ session, isHydrated }` + actions. **Store dormant tant qu'aucun consommateur ne l'importe.** | faible (dormant) | non |
+| **P** | 3.6 | `entities/session/hooks.ts` : selectors granulaires (`useDailySession`, `useCurrentTask`, `useAllDone`, `useTotalElapsed`, `useHasSessionToday`, `useSessionActions(shallow)`). Dormants. | faible | non |
+| **Q** | 3.7 | **Transition douce** : `SessionEngineContext.tsx` devient une **façade** qui lit le store Zustand et expose l'ancienne API publique. Tous les consommateurs (`SessionWidget`, `HomeView`, `WeeklyTracker`, `SubjectDetailModal` qui lit `updateChapterProgress`…) continuent sans modification. **Flip du switch persistance**. | **moyen** ⚠ | **obligatoire** : login → démarrer une session → compléter une tâche → refresh → timer & progression préservés |
+| **R** | 3.8 | Migration des consommateurs vers les selectors directs + suppression de la façade `SessionEngineContext.tsx`. Migration des imports `@/context/SessionEngineContext` vers `@/entities/session/hooks`. Suppression éventuelle de `src/types/session.ts` (BC shim de Lot L). | **moyen** | **obligatoire** (même scénario que Lot Q) |
+
+**Ordre strict** : L → M → N → O → P → Q (smoke) → R (smoke + tag `phase-3-done`).
+
+**Chainable autonomement (risque faible, pas de smoke)** : L + M + N + O + P. Stop obligatoire avant Q.
+
+### Critères de succès Phase 3
+
+- [ ] `entities/session/{types,model,api,store,hooks}.ts` + `__tests__/` existent
+- [ ] `zustand` présent dans `package.json`
+- [ ] `SessionEngineContext.tsx` supprimé (ou réduit à ~0 lignes via façade temporaire puis supprimé)
+- [ ] `generateDailyTasks` et compagnie testées en isolation (~200 lig de tests unitaires)
+- [ ] Clé de stockage `med-pilot-daily-session` **préservée** (+ ajoutée à `KNOWN_KEYS` si manquante — à confirmer au Lot O)
+- [ ] Format sérialisé des sessions **inchangé** (round-trip testé dès Lot N)
+- [ ] Tests passent de 62 → ~80+ (≥200 lig de tests session model)
+- [ ] Tag `phase-3-done` posé
+- [ ] Smoke tests user passés (après Lot Q et après Lot R)
+
+### Points d'attention spécifiques Phase 3
+
+1. **Règle dure** : `generateDailyTasks(strategy, subjects, load)` reçoit les données en **paramètres**, jamais via un autre store (cf. invariant §7.5). Le hook d'orchestration `features/session-widget/useSessionWidget.ts` (créé plus tard en Phase 7) composera les 3 stores ; d'ici là c'est `SessionEngineContext` façade qui consomme `useSubjects()` + `useStrategy()`.
+2. **Persist middleware Zustand + userDataRepository** : hydratation asynchrone. Prévoir `isHydrated: false` au boot + skeleton côté consommateurs le temps du premier load cloud (déjà le pattern actuel via `localStorage` init + `useEffect` de chargement Supabase).
+3. **`med-pilot-daily-session` absent de `KNOWN_KEYS`** : à ajouter lors du Lot O pour que `useMigration.ts` ne l'ignore pas silencieusement.
+4. **Tests Lot M = artefact critique** : ils figent le comportement actuel AVANT tout réarrangement. Si un test capture mal un edge case, le refactor Zustand introduira un bug silencieux. Review attentive recommandée avant Lot O.
 
 ---
 
@@ -289,3 +361,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-18 | Claude (session interactive) | Lots C et D enchaînés sur autorisation conditionnée aux tests. 5 commits atomiques (1.9 → 1.13). Build + 39 tests OK à chaque étape. `PlanningContext`, `StrategyContext`, `EventContext`, `EdnCountdown`, `TasksNotes` migrés sur `useCloudValue`. `useSessionTimingStorage` refondé sur `userDataRepository` (tests ré-écrits avec `vi.hoisted`). `useCloudStorage` encore utilisé par `ErrorPanel` + `AnkiExport` (scope Phase 7). Prochain lot : E (1.14). |
 | 2026-04-18 | Claude (session interactive) | Lot E : étape 1.14 exécutée selon le plan. Grep : 2 importeurs subsistent (`ErrorPanel.tsx`, `AnkiExport.tsx`). Conformément au prompt (`si importeurs restants, liste-les, ne supprime pas`), **`src/hooks/useCloudStorage.ts` conservé**. Build final + 39 tests OK. Suppression reportée à après Phase 7 (étapes 7.9 + 7.10 migreront ces 2 derniers consommateurs). Smoke test programmatique OK (HTTP /login 200, middleware OK, 0 erreur logs). Smoke test UI authentifié à faire par le user. |
 | 2026-04-19 | Claude (session interactive) | **Phase 1 validée** côté utilisateur (smoke test OK : modifs dans l'app, pas de crash, sauvegarde Supabase OK). Tag `phase-1-done` posé sur `e853cac`. **Phase 2 cadrée** : 10 steps atomiques (2.1 → 2.10) regroupés en 6 lots F→K (voir §5b). Lot recommandé en priorité : Lot F (Subject foundation, risque zéro). Divergences de clés pré-existantes reportées à Phase 3 (voir §7 "À surveiller"). Prochain lot : Lot F. |
+| 2026-04-20 | Claude (session interactive, semi-autonome souple) | **Phase 2 terminée en une journée** : 10 steps / 10 commits code + 1 commit docs. Lots F → K exécutés dans l'ordre strict, smoke tests user OK après H et K. Tag `phase-2-done` posé sur `94b83d3`. Tests 39 → 62 (+12 Subject, +12 Strategy, 0 régression). Build 79.6 kB middleware inchangé. 25 imports migrés vers `entities/subject/*` et `entities/strategy/*`. `src/types/strategy.ts` supprimé. Mini-surprise gérée : 1 référence relative `./strategy` dans `src/types/session.ts` que le grep alias-only avait manquée, corrigée au step 2.10. **Phase 3 cadrée** : 7 lots L→R (voir §5c). Chainables autonomement (pures additions) : L+M+N+O+P. Stop obligatoire avant Q (flip switch persistance). Prochain lot : Lot L. |
