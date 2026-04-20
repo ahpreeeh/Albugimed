@@ -1,17 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
 import {
     Play, Square, ArrowRight, SkipForward, Settings2,
     Clock, Zap, Target, CheckCircle2, Trophy, Pause,
 } from 'lucide-react';
 import { useStrategy } from '@/entities/strategy/hooks';
-import { useSessionEngine } from '@/context/SessionEngineContext';
+import { useSubjects } from '@/entities/subject/hooks';
+import {
+    useAllDone,
+    useCurrentTask,
+    useDailySession,
+    useHasSessionToday,
+    useSessionActions,
+    useSessionStore,
+    useTotalElapsed,
+} from '@/entities/session/hooks';
 import { StrategyModal } from './StrategyModal';
 import { useSessionTimingStorage } from '@/hooks/useSessionTimingStorage';
 import type { DayLoad } from '@/entities/strategy/types';
-import type { DifficultyRating } from '@/types/session';
-import { reasonLabel, taskTypeLabel, reasonBadgeClass, difficultyColor } from '@/types/session';
+import type { DifficultyRating } from '@/entities/session/types';
+import { reasonLabel, taskTypeLabel, reasonBadgeClass, difficultyColor } from '@/entities/session/types';
 import { cn } from '@/shared/lib/cn';
 import { toLocalISOString } from '@/shared/lib/dates';
 
@@ -111,12 +120,15 @@ const DifficultySelector = ({ onRate }: { onRate: (r: DifficultyRating) => void 
 
 // ─── Main Widget ─────────────────────────────────────────────────────
 export const SessionWidget = () => {
-    const { hasStrategy } = useStrategy();
-    const {
-        session, generateSession,
-        startCurrentTask, completeCurrentTask, skipCurrentTask,
-        currentTask, currentTaskIndex, allDone, totalElapsedMs, hasSessionToday,
-    } = useSessionEngine();
+    const { hasStrategy, strategy } = useStrategy();
+    const { subjects, updateChapterProgress } = useSubjects();
+    const session = useDailySession();
+    const { currentTask, currentTaskIndex } = useCurrentTask();
+    const allDone = useAllDone();
+    const totalElapsedMs = useTotalElapsed();
+    const today = toLocalISOString(new Date());
+    const hasSessionToday = useHasSessionToday(today);
+    const { hydrate, generateSession: generateStoreSession, startTask, completeTask, skipTask } = useSessionActions();
 
     const [strategieOpen, setStrategieOpen] = useState(false);
     const [showRating, setShowRating] = useState(false);
@@ -127,15 +139,33 @@ export const SessionWidget = () => {
     const isRunning = currentTask?.status === 'in-progress';
     const liveTimer = useTimer(isRunning, isPaused);
 
+    useLayoutEffect(() => {
+        useSessionStore.setState({
+            session: null,
+            history: [],
+            isHydrated: false,
+        });
+    }, [today]);
+
+    useEffect(() => {
+        void hydrate(today);
+    }, [hydrate, today]);
+
     // Reset pause when task changes
     useEffect(() => { setIsPaused(false); }, [currentTask?.id]);
 
     const { saveWith: saveTimingEntries } = useSessionTimingStorage();
 
+    const generateSession = useCallback((load: DayLoad) => {
+        if (!strategy) return;
+        generateStoreSession(strategy, subjects, load, today);
+    }, [generateStoreSession, strategy, subjects, today]);
+
     const handleStart = useCallback(() => {
         startedAtRef.current = new Date().toISOString();
-        startCurrentTask();
-    }, [startCurrentTask]);
+        if (!currentTask) return;
+        startTask(currentTask.id);
+    }, [currentTask, startTask]);
 
     const handleStop = useCallback(() => {
         pendingDurationRef.current = liveTimer;
@@ -162,6 +192,24 @@ export const SessionWidget = () => {
         saveTimingEntries(prev => [...prev, entry]);
         startedAtRef.current = null;
     }, [currentTask, saveTimingEntries]);
+
+    const completeCurrentTask = useCallback((rating: DifficultyRating) => {
+        if (!currentTask) return;
+
+        const completion = completeTask(currentTask.id, rating);
+        if (!completion) return;
+
+        updateChapterProgress(
+            completion.subjectId,
+            completion.chapterId,
+            completion.progressUpdate,
+        );
+    }, [completeTask, currentTask, updateChapterProgress]);
+
+    const skipCurrentTask = useCallback(() => {
+        if (!currentTask) return;
+        skipTask(currentTask.id);
+    }, [currentTask, skipTask]);
 
     // Progress bar
     const progress = useMemo(() => {
