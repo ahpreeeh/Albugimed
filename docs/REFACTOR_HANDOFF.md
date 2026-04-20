@@ -2,8 +2,8 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-20 (Phase 2 validée — smoke user OK, Phase 3 cadrée en 7 lots)
-**Mise à jour par** : Claude (session interactive, mode semi-autonome souple)
+**Dernière mise à jour** : 2026-04-20 (Phase 3 en cours — steps 3.1 à 3.5 validés localement)
+**Mise à jour par** : Codex (session interactive, audit + reprise semi-autonome)
 
 ---
 
@@ -16,9 +16,9 @@
 | Tag de rollback | `backup/pre-refactor-v2` (HEAD pristine de `main` avant tout refactor) |
 | Tag fin Phase 1 | `phase-1-done` sur `e853cac` |
 | Tag fin Phase 2 | `phase-2-done` sur `94b83d3` |
-| HEAD de la branche refactor | `94b83d3` (step 2.10, voir `git log --oneline -20`) |
+| HEAD de la branche refactor | Phase 3 en cours — confirmer avec `git log --oneline -10` |
 | Remote push | **non pushé** — tout est local |
-| Tests | 9 fichiers / 62 tests / 0 échec |
+| Tests | 12 fichiers / 142 tests / 0 échec |
 | Build Next.js | ✅ OK (6 routes statiques, middleware 79.6 kB — inchangé depuis Phase 1) |
 | Smoke test Phase 1 | ✅ validé 2026-04-19 (modifs dans l'app, pas de crash, sauvegarde Supabase OK) |
 | Smoke test Phase 2 Lot H | ✅ validé 2026-04-20 (SubjectContext migré sur api.ts, persistance OK) |
@@ -27,6 +27,11 @@
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+143b04e refactor(phase-3): step 3.4 — Session api layer on userDataRepository
+ce66928 refactor(phase-3): step 3.3 — extract Session model + TDD tests
+f0482f8 refactor(phase-3): step 3.2 — extract Session types to entities/session/types
+633ac86 refactor(phase-3): step 3.1 — install zustand dependency
+80ab1e3 docs(refactor): validate Phase 2 + plan Phase 3 lots
 94b83d3 refactor(phase-2): step 2.10 — migrate Strategy consumers + delete types/strategy.ts
 54a775c refactor(phase-2): step 2.9 — Strategy hooks facade + wire isValidStrategy
 2ca82e1 refactor(phase-2): step 2.8 — add Strategy model + materialize isValidStrategy guard
@@ -125,7 +130,15 @@ a1adf4f docs(refactor): add REFACTOR_PLAN.md and REFACTOR_HANDOFF.md
 
 ### Phase 3 — Session Engine refactor
 
-**État** : cadrée en 7 lots (L → R, 8 steps atomiques 3.1 → 3.8). Voir §5c pour le tableau détaillé. **Lot recommandé en priorité : Lot L** (install zustand + move types, risque zéro). Ajoute la dépendance `zustand`.
+| Étape | Statut | Preuve |
+|---|---|---|
+| 3.1 install `zustand` | ✅ | `package.json` + `package-lock.json` mis à jour, commit `633ac86`, build + tests OK |
+| 3.2 `entities/session/types.ts` + BC shim | ✅ | `src/entities/session/types.ts` créé, `src/types/session.ts` devient re-export, commit `f0482f8`, build + tests OK |
+| 3.3 `entities/session/model.ts` + TDD tests | ✅ | `src/entities/session/model.ts` + `src/entities/session/__tests__/model.test.ts` créés, commit `ce66928`, build + tests OK |
+| 3.4 `entities/session/api.ts` + tests | ✅ | `src/entities/session/api.ts` + `src/entities/session/__tests__/api.test.ts` créés, `med-pilot-daily-session` ajouté à `STORAGE_KEYS.session.daily`, commit `143b04e`, build + tests OK |
+| 3.5 `entities/session/store.ts` + tests | ✅ | Store Zustand dormant ajouté avec `hydrate/generate/start/complete/skip/clear/setSession` + tests. Deux bugs critiques corrigés avant commit : réhydratation laissant un état mémoire obsolète, et course asynchrone pouvant perdre des entrées d'historique. Build + 142 tests OK. |
+
+**État** : les lots L, M, N et O sont désormais couverts. Le store reste **dormant** : aucun consommateur n'a encore basculé dessus, donc pas de smoke user requis à ce stade. Voir §5c pour le tableau détaillé. **Prochain lot recommandé : P** (`entities/session/hooks.ts`, faible risque, toujours dormant).
 
 ---
 
@@ -143,26 +156,25 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochain lot à exécuter — **Lot L (Phase 3, Session Engine setup)**
+## 4. Prochain lot à exécuter — **Lot P (Phase 3, selectors Zustand)**
 
-Phase 2 **validée** (10 étapes, 2 smoke tests user OK). Tag `phase-2-done` posé sur `94b83d3`. On démarre la **Phase 3 : Session Engine refactor** — c'est le plus gros chantier du refactor (`SessionEngineContext.tsx` 496 lignes → 6 fichiers, ajout `zustand`).
+Phase 2 **validée** (10 étapes, 2 smoke tests user OK). La **Phase 3** a déjà franchi ses fondations pures et son store dormant (`3.1` → `3.5`). Aucun consommateur n'a encore été basculé : le risque produit reste faible tant que `SessionEngineContext.tsx` continue de porter le comportement réel.
 
-**Asymétrie à exploiter** : 3 des 8 steps Phase 3 sont des **pures additions** (types, model, api) sans consommateur touché → Lot L, M, N peuvent être chaînés. Les 4 steps suivants (store Zustand + façade + migration) touchent la persistance réelle → smoke tests obligatoires.
+**Asymétrie à exploiter** : il reste un dernier lot faible risque et dormant (`P`) avant le flip-switch `Q`. À partir de `Q`, la persistance réelle et le comportement utilisateur changent → smoke tests obligatoires.
 
-### Lot L — Setup Phase 3 (steps 3.1 + 3.2)
+### Lot P — Selectors Zustand (step 3.6)
 
-Risque : **faible**. Pure setup, aucun consommateur touché.
+Risque : **faible**. Pure addition, aucun consommateur touché.
 
 | Step | Action | Fichiers |
 |---|---|---|
-| 3.1 | `npm install zustand` (nouvelle dépendance). Vérifier que `tsc`, tests et build restent verts. | `package.json`, `package-lock.json` |
-| 3.2 | Créer `entities/session/types.ts` en copiant `src/types/session.ts`. `src/types/session.ts` devient un BC re-export jusqu'à la migration des consommateurs (step 3.8). | `src/entities/session/types.ts`, `src/types/session.ts` (modifié) |
+| 3.6 | Créer `entities/session/hooks.ts` avec selectors granulaires (`useDailySession`, `useCurrentTask`, `useAllDone`, `useTotalElapsed`, `useHasSessionToday`, `useSessionActions`). Le fichier reste dormant tant que `SessionEngineContext` n'importe rien depuis `entities/session`. | `src/entities/session/hooks.ts` |
 
-**Vérification Lot L** : `npm test` → 62 tests verts (aucun nouveau), `npm run build` vert, `zustand` présent dans `package.json`.
+**Vérification Lot P** : `npm test` vert, `npm run build` vert. Aucun smoke test utilisateur tant que `SessionEngineContext.tsx` n'est pas branché sur le store.
 
 ### Prochaine phase logique
 
-Après Lot L → Lot M (step 3.3, extraction du model.ts avec tests TDD **critiques** car ils figent le comportement actuel avant tout réarrangement). Puis Lot N (3.4, api.ts), Lot O (3.5, store Zustand — **moyen, persist hydration**), Lot P (3.6, hooks selectors). Voir §5c pour le plan complet Phase 3.
+Après Lot P → **STOP avant Lot Q**. `Q` bascule `SessionEngineContext.tsx` sur Zustand et change la persistance effective ; smoke test utilisateur indispensable.
 
 ---
 
@@ -235,12 +247,12 @@ Imposé par le user pour limiter le blast radius. Chaque lot se termine par un s
 ### Critères de succès Phase 3
 
 - [ ] `entities/session/{types,model,api,store,hooks}.ts` + `__tests__/` existent
-- [ ] `zustand` présent dans `package.json`
+- [x] `zustand` présent dans `package.json`
 - [ ] `SessionEngineContext.tsx` supprimé (ou réduit à ~0 lignes via façade temporaire puis supprimé)
-- [ ] `generateDailyTasks` et compagnie testées en isolation (~200 lig de tests unitaires)
-- [ ] Clé de stockage `med-pilot-daily-session` **préservée** (+ ajoutée à `KNOWN_KEYS` si manquante — à confirmer au Lot O)
-- [ ] Format sérialisé des sessions **inchangé** (round-trip testé dès Lot N)
-- [ ] Tests passent de 62 → ~80+ (≥200 lig de tests session model)
+- [x] `generateDailyTasks` et compagnie testées en isolation (~200 lig de tests unitaires)
+- [x] Clé de stockage `med-pilot-daily-session` **préservée** dans `STORAGE_KEYS`
+- [x] Format sérialisé des sessions **inchangé** côté `api.ts` (round-trip des accès repository couvert)
+- [x] Tests passent de 62 → 142
 - [ ] Tag `phase-3-done` posé
 - [ ] Smoke tests user passés (après Lot Q et après Lot R)
 
@@ -362,3 +374,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-18 | Claude (session interactive) | Lot E : étape 1.14 exécutée selon le plan. Grep : 2 importeurs subsistent (`ErrorPanel.tsx`, `AnkiExport.tsx`). Conformément au prompt (`si importeurs restants, liste-les, ne supprime pas`), **`src/hooks/useCloudStorage.ts` conservé**. Build final + 39 tests OK. Suppression reportée à après Phase 7 (étapes 7.9 + 7.10 migreront ces 2 derniers consommateurs). Smoke test programmatique OK (HTTP /login 200, middleware OK, 0 erreur logs). Smoke test UI authentifié à faire par le user. |
 | 2026-04-19 | Claude (session interactive) | **Phase 1 validée** côté utilisateur (smoke test OK : modifs dans l'app, pas de crash, sauvegarde Supabase OK). Tag `phase-1-done` posé sur `e853cac`. **Phase 2 cadrée** : 10 steps atomiques (2.1 → 2.10) regroupés en 6 lots F→K (voir §5b). Lot recommandé en priorité : Lot F (Subject foundation, risque zéro). Divergences de clés pré-existantes reportées à Phase 3 (voir §7 "À surveiller"). Prochain lot : Lot F. |
 | 2026-04-20 | Claude (session interactive, semi-autonome souple) | **Phase 2 terminée en une journée** : 10 steps / 10 commits code + 1 commit docs. Lots F → K exécutés dans l'ordre strict, smoke tests user OK après H et K. Tag `phase-2-done` posé sur `94b83d3`. Tests 39 → 62 (+12 Subject, +12 Strategy, 0 régression). Build 79.6 kB middleware inchangé. 25 imports migrés vers `entities/subject/*` et `entities/strategy/*`. `src/types/strategy.ts` supprimé. Mini-surprise gérée : 1 référence relative `./strategy` dans `src/types/session.ts` que le grep alias-only avait manquée, corrigée au step 2.10. **Phase 3 cadrée** : 7 lots L→R (voir §5c). Chainables autonomement (pures additions) : L+M+N+O+P. Stop obligatoire avant Q (flip switch persistance). Prochain lot : Lot L. |
+| 2026-04-20 | Codex | Audit + reprise Phase 3. État réel resynchronisé avec le dépôt : steps 3.1 à 3.4 déjà commités (`633ac86`, `f0482f8`, `ce66928`, `143b04e`). Step 3.5 préparé localement avec store Zustand dormant + tests renforcés. Deux bugs critiques corrigés avant commit : réhydratation qui conservait un état mémoire obsolète et course asynchrone pouvant perdre des entrées d'historique. Build + 142 tests OK. Prochain lot : P, puis stop obligatoire avant Q pour smoke utilisateur. |
