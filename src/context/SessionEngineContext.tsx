@@ -1,9 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
-import { useSubjects } from '@/context/SubjectContext';
+import { useSubjects } from '@/entities/subject/hooks';
 import { useStrategy } from '@/context/StrategyContext';
-import type { Subject, Chapter, ChapterProgress } from '@/context/SubjectContext';
+import type { Subject, Chapter, ChapterProgress } from '@/entities/subject/hooks';
 import type { ActiveStrategy } from '@/types/strategy';
 import type { DayLoad } from '@/types/strategy';
 import type {

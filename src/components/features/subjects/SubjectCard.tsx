@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Subject, getIconComponent } from "@/context/SubjectContext";
+import { Subject, getIconComponent } from "@/entities/subject/hooks";
 import { CalendarClock } from "lucide-react";
 
 interface SubjectCardProps {

@@ -1,4 +1,4 @@
-import type { Subject } from "@/context/SubjectContext";
+import type { Subject } from "@/entities/subject/hooks";
 import { calculateWeeklyTrackerSnapshot } from "@/components/features/tracking/weeklyTrackerUtils";
 import type { ActiveStrategy } from "@/types/strategy";
 import { describe, expect, it } from "vitest";

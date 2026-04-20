@@ -1,4 +1,4 @@
-export type { Subject, Chapter, ChapterStatus, ChapterProgress } from '@/context/SubjectContext';
+export type { Subject, Chapter, ChapterStatus, ChapterProgress } from '@/entities/subject/hooks';
 
 export interface ChatMessage {
     id: string;

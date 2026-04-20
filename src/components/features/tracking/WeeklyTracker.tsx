@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
-import { useSubjects } from "@/context/SubjectContext";
+import { useSubjects } from "@/entities/subject/hooks";
 import { useStrategy } from "@/context/StrategyContext";
 import { useSessionTimingStorage } from "@/hooks/useSessionTimingStorage";
 import { cn } from "@/shared/lib/cn";

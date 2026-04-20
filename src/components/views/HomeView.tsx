@@ -8,8 +8,8 @@ import {
     Target, Plus, CheckSquare, FileText, Trash2, X,
     Save, ChevronDown, ChevronUp,
 } from "lucide-react";
-import { useSubjects } from "@/context/SubjectContext";
-import type { Subject } from "@/context/SubjectContext";
+import { useSubjects } from "@/entities/subject/hooks";
+import type { Subject } from "@/entities/subject/hooks";
 import { useEvents } from "@/context/EventContext";
 import type { AgendaEvent } from "@/context/EventContext";
 import { useView } from "@/context/ViewContext";

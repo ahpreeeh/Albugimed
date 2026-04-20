@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Settings2, Calendar as CalendarIcon, X, Check, Info } from 'lucide-react';
-import { useSubjects } from '@/context/SubjectContext';
+import { useSubjects } from '@/entities/subject/hooks';
 import { useStrategy } from '@/context/StrategyContext';
 import type { StrategyMode, VacationObjective, LearningScope, ActiveStrategy } from '@/types/strategy';
 import { DUREES, createEmptyStrategy } from '@/types/strategy';

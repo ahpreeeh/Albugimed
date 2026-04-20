@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import TopNav from './TopNav';
 import { ViewProvider } from '@/context/ViewContext';
-import { SubjectProvider } from '@/context/SubjectContext';
+import { SubjectProvider } from '@/entities/subject/hooks';
 import { EventProvider } from '@/context/EventContext';
 import { PlanningProvider } from '@/context/PlanningContext';
 import { StrategyProvider } from '@/context/StrategyContext';

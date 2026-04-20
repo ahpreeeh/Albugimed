@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { BookOpen, Plus, Filter, ChevronDown, ChevronRight, FolderOpen } from "lucide-react";
-import { useSubjects, Subject } from "@/context/SubjectContext";
+import { useSubjects, Subject } from "@/entities/subject/hooks";
 import { SubjectCard } from "@/components/features/subjects/SubjectCard";
 import { AddSubjectModal } from "@/components/features/subjects/AddSubjectModal";
 import { SubjectDetailModal } from "@/components/features/subjects/SubjectDetailModal";

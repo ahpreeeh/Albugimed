@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { X, Upload } from "lucide-react";
-import { useSubjects, AVAILABLE_ICONS, ICON_MAP } from "@/context/SubjectContext";
+import { useSubjects, AVAILABLE_ICONS, ICON_MAP } from "@/entities/subject/hooks";
 import { MEDICAL_ICON_LABELS } from "@/components/icons/MedicalIcons";
 
 interface AddSubjectModalProps {

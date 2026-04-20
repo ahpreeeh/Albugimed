@@ -1,4 +1,4 @@
-import type { Subject } from "@/context/SubjectContext";
+import type { Subject } from "@/entities/subject/hooks";
 import type { SessionTimingEntry } from "@/entities/session-timing/model";
 import {
   getSessionTimingChapterKey,

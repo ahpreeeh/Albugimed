@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import {
     Subject, useSubjects, getIconComponent,
-} from "@/context/SubjectContext";
+} from "@/entities/subject/hooks";
 import { cn } from "@/shared/lib/cn";
 
 interface Props {
