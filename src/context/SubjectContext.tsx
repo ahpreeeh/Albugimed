@@ -5,9 +5,9 @@ import { BookOpen, LucideIcon } from 'lucide-react';
 import { validateSubjects } from '@/shared/lib/validators';
 import { MEDICAL_ICON_MAP, MEDICAL_ICON_NAMES } from '@/components/icons/MedicalIcons';
 import type { MedIconProps } from '@/components/icons/MedicalIcons';
-import { createClient } from '@/utils/supabase/client';
 import type { ChapterStatus, ChapterProgress, Chapter, Subject } from '@/entities/subject/types';
 import { createDefaultProgress } from '@/entities/subject/model';
+import { loadSubjects, saveSubjects } from '@/entities/subject/api';
 
 // ─── Icon map ─────────────────────────────────────────────────────────
 export const ICON_MAP: Record<string, LucideIcon | React.FC<MedIconProps>> = {
@@ -46,59 +46,37 @@ export const SubjectProvider = ({ children }: { children: ReactNode }) => {
         } catch { return []; }
     });
 
-    const supabase = useRef(createClient()).current;
     const isCloudLoaded = useRef(false);
 
-    // ── Chargement depuis Supabase au montage ────────────────────────
+    // ── Chargement depuis le cloud au montage ────────────────────────
     useEffect(() => {
         let cancelled = false;
 
-        async function loadFromCloud() {
+        async function hydrateFromCloud() {
             try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
-
-                const { data: row } = await supabase
-                    .from('user_data')
-                    .select('data_value')
-                    .eq('user_id', user.id)
-                    .eq('data_key', STORAGE_KEY)
-                    .maybeSingle();
-
-                if (!cancelled && row?.data_value) {
-                    const cloudSubjects = validateSubjects(row.data_value as Subject[]);
+                const cloudSubjects = await loadSubjects();
+                if (!cancelled && cloudSubjects !== null) {
                     setSubjects(cloudSubjects);
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudSubjects));
                 }
             } catch (err) {
-                console.warn('[SubjectContext] Chargement Supabase échoué', err);
+                console.warn('[SubjectContext] Chargement cloud échoué', err);
             } finally {
                 if (!cancelled) isCloudLoaded.current = true;
             }
         }
 
-        loadFromCloud();
+        hydrateFromCloud();
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ── Persistance : localStorage + Supabase (fire-and-forget) ─────
+    // ── Persistance : localStorage + cloud (fire-and-forget) ─────
     const persist = useCallback((next: Subject[]) => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (!user) return;
-            supabase.from('user_data').upsert(
-                { user_id: user.id, data_key: STORAGE_KEY, data_value: next },
-                { onConflict: 'user_id,data_key' },
-            ).then(({ error }) => {
-                if (error) {
-                    console.error('[SubjectContext] Erreur lors de la synchronisation Supabase:', error);
-                } else {
-                    console.log('[SubjectContext] Synchronisation réussie.');
-                }
-            });
+        saveSubjects(next).catch(err => {
+            console.error('[SubjectContext] Erreur lors de la synchronisation cloud:', err);
         });
-    }, [supabase]);
+    }, []);
 
     // ── Mutation helper : setSubjects + persist ──────────────────────
     const mutate = useCallback((updater: (prev: Subject[]) => Subject[]) => {
