@@ -18,6 +18,7 @@ import {
 import { StrategyModal } from './StrategyModal';
 import { DayLoadSelector } from '@/features/session-widget/DayLoadSelector';
 import { DifficultySelector } from '@/features/session-widget/DifficultySelector';
+import { SessionTimer, formatTime, useSessionTimer } from '@/features/session-widget/SessionTimer';
 import { useSessionTimingStorage } from '@/hooks/useSessionTimingStorage';
 import type { DayLoad } from '@/entities/strategy/types';
 import type { DifficultyRating } from '@/entities/session/types';
@@ -25,72 +26,7 @@ import { reasonLabel, taskTypeLabel, reasonBadgeClass } from '@/entities/session
 import { cn } from '@/shared/lib/cn';
 import { toLocalISOString } from '@/shared/lib/dates';
 
-// ─── Timer hook (with pause support) ─────────────────────────────────
-//
-// Le temps écoulé est dérivé du timestamp `startedAt` de la tâche en
-// cours, qui est persisté (cloud + localStorage). Quand le widget se
-// démonte/remonte (par exemple après une navigation entre routes),
-// l'horloge ne repart PAS à zéro : elle reprend à `Date.now() - startedAt`.
-//
-// La pause reste un état local au widget (non persisté entre nav).
-// Si l'utilisateur met en pause puis change de route, à son retour
-// le timer apparaîtra "running" (pas plus paused) — le compromis de
-// simplicité ; persister l'état de pause demanderait de l'ajouter au
-// modèle de tâche.
-function useTimer(startedAt: number | null, isPaused: boolean): number {
-    const [now, setNow] = useState(() => Date.now());
-    const pauseAccumRef = useRef(0);
-    const pauseStartRef = useRef<number | null>(null);
-    const frozenElapsedRef = useRef<number | null>(null);
-    const lastStartedAtRef = useRef<number | null>(null);
-
-    // Reset des accumulateurs quand la tâche change (différent startedAt)
-    useEffect(() => {
-        if (lastStartedAtRef.current !== startedAt) {
-            pauseAccumRef.current = 0;
-            pauseStartRef.current = null;
-            frozenElapsedRef.current = null;
-            lastStartedAtRef.current = startedAt;
-        }
-    }, [startedAt]);
-
-    // Tracking des transitions pause/resume
-    useEffect(() => {
-        if (!startedAt) return;
-        if (isPaused) {
-            frozenElapsedRef.current = Date.now() - startedAt - pauseAccumRef.current;
-            pauseStartRef.current = Date.now();
-        } else if (pauseStartRef.current !== null) {
-            pauseAccumRef.current += Date.now() - pauseStartRef.current;
-            pauseStartRef.current = null;
-            frozenElapsedRef.current = null;
-            setNow(Date.now()); // refresh immédiat à la reprise
-        }
-    }, [isPaused, startedAt]);
-
-    // Tick toutes les secondes quand la tâche tourne
-    useEffect(() => {
-        if (!startedAt || isPaused) return;
-        setNow(Date.now()); // refresh immédiat au montage / start
-        const interval = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(interval);
-    }, [startedAt, isPaused]);
-
-    if (!startedAt) return 0;
-    if (isPaused && frozenElapsedRef.current !== null) {
-        return frozenElapsedRef.current;
-    }
-    return Math.max(0, now - startedAt - pauseAccumRef.current);
-}
-
-function formatTime(ms: number): string {
-    const totalSec = Math.floor(ms / 1000);
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
-    return `${min}m ${String(sec).padStart(2, '0')}s`;
-}
-
-// ─── Main Widget ─────────────────────────────────────────────────────
+// ─── Main Widget ───────────────────────────────────────────────────
 export const SessionWidget = () => {
     const { hasStrategy, strategy } = useStrategy();
     const { subjects, updateChapterProgress } = useSubjects();
@@ -117,8 +53,8 @@ export const SessionWidget = () => {
 
     const isRunning = currentTask?.status === 'in-progress';
     // Timer dérive du startedAt persisté → survit aux navigations entre routes
-    // (cf. useTimer) au lieu de repartir à zéro à chaque remount du widget.
-    const liveTimer = useTimer(
+    // (cf. useSessionTimer) au lieu de repartir à zéro à chaque remount du widget.
+    const liveTimer = useSessionTimer(
         isRunning ? currentTask?.startedAt ?? null : null,
         isPaused,
     );
@@ -349,11 +285,7 @@ export const SessionWidget = () => {
                                         {taskTypeLabel(currentTask.taskType, currentTask.annaleLevel)}
                                     </span>
                                     {isRunning && (
-                                        <span className="flex items-center gap-1.5 text-[var(--color-accent)] font-mono">
-                                            <Clock className="h-3.5 w-3.5 animate-pulse" />
-                                            {formatTime(liveTimer)}
-                                            {isPaused && <span className="text-amber-500 text-[10px] ml-1 uppercase font-bold tracking-wider">(En pause)</span>}
-                                        </span>
+                                        <SessionTimer elapsedMs={liveTimer} isPaused={isPaused} />
                                     )}
                                 </div>
                             </div>
