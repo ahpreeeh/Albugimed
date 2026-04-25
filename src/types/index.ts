@@ -1,26 +1,6 @@
 export type { Subject, Chapter, ChapterStatus, ChapterProgress } from '@/entities/subject/hooks';
 
-export interface ChatMessage {
-    id: string;
-    role: 'user' | 'model' | 'system';
-    text: string;
-    timestamp: number;
-}
-
-export interface ErrorEntry {
-    id: string;
-    matiere: string;
-    question: string;
-    erreur_commise: string;
-    correction: string;
-    date: number;
-    isExported?: boolean;
-}
-
-export interface Flashcard {
-    question: string;
-    reponse: string;
-}
+export type { ChatMessage, ErrorEntry, Flashcard } from '@/entities/simulation/types';
 
 export interface MedPilotBackup {
     version: number;

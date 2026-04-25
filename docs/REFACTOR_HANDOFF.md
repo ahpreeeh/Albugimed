@@ -185,7 +185,7 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochaine action à exécuter — **Phase 7 Lot AI**
+## 4. Prochaine action à exécuter — **Phase 7 Lot AJ**
 
 Phase 5 **clôturée** le 2026-04-25 (tag `phase-5-done` sur `b7773c3`). Smoke vital validé : `/planning` fonctionne après suppression de `PlanningView.tsx` et du shim `src/types/planning.ts`.
 
@@ -198,7 +198,7 @@ Phase 6 est **code OK** : les trois vues restantes (`HomeView`, `SubjectsView`, 
 | AD | 6.6 | ✅ code OK | `SubjectCard`, `AddSubjectModal`, `SubjectDetailModal` déplacés vers `features/subject-list/`. `npm test` + `npm run build` OK. |
 | AE | 6.7 | ⚠️ code OK, smoke phase accumulé | `subjects/page.tsx` et `simulation/page.tsx` portent directement leur JSX. `SubjectsView.tsx`, `SimulationView.tsx` et le test orphelin sous `components/views` ont été supprimés/déplacés. `npm test` + `npm run build` OK. |
 
-Prochain lot autorisé en semi-autonome : **Phase 7 Lot AI** (`7.6`) — créer `entities/simulation/*` en dormant avec tests purs. Stop avant AJ si le branchement Gemini/chat devient sensible.
+Prochain lot autorisé sous réserve de prudence : **Phase 7 Lot AJ** (`7.7`) — migrer `SimulatorChat` vers `features/simulator-chat/` et brancher `entities/simulation`. Lot sensible : Gemini + capture erreur + chat history, smoke simulation requis après.
 
 ### Smoke Phase 6 à accumuler puis valider
 
@@ -409,7 +409,7 @@ Phase 7 = découpe des gros composants features restants. Les lots qui touchent 
 | **AF** | 7.1 → 7.3 ✅ | Extraire `DayLoadSelector`, `DifficultySelector`, `SessionTimer` depuis `SessionWidget.tsx` vers `features/session-widget/`. `DayLoadSelector`, `DifficultySelector`, `SessionTimer` extraits, tests/build OK. | faible | session smoke accumulé |
 | **AG** | 7.4 ✅ code OK | Déplacer `SessionWidget` vers `features/session-widget/` et mettre à jour les imports. `npm test` + `npm run build` OK. | moyen | session complet accumulé |
 | **AH** | 7.5 ✅ code OK | `StrategyModal` déplacé vers `features/strategy-picker/`, avec `ModeTabs` et `SubjectMultiSelect` extraits. `npm test` + `npm run build` OK. | moyen | stratégie accumulé |
-| **AI** | 7.6 | Créer `entities/simulation/{types,gemini,model,api}.ts` + tests purs. | moyen | non si dormant |
+| **AI** | 7.6 ✅ | `entities/simulation/{types,gemini,model,api}.ts` créé en dormant. `extractErrorCapture` + `buildAnkiTsv` couverts par tests. `src/types/index.ts` ré-exporte `ChatMessage`, `ErrorEntry`, `Flashcard`. Tests 181→189, build OK. | moyen | non, dormant |
 | **AJ** | 7.7 | Migrer `SimulatorChat` vers `features/simulator-chat/` et brancher `entities/simulation`. | élevé | chat + capture erreur requis |
 | **AK** | 7.8 | Extraire le sous-composant message chat si présent. | faible | regroupable |
 | **AL** | 7.9 | Déplacer `ErrorPanel` vers `features/error-panel/` et utiliser `entities/simulation/api`. | faible à moyen | cahier d'erreurs |
@@ -536,4 +536,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-25 | Codex | Smoke vital Phase 5 validé par le user. Tag `phase-5-done` posé sur `b7773c3`. Handoff mis à jour pour cadrer la Phase 6 : Lot AB (`HomeView` widgets), Lot AC (`cockpit/page.tsx` final + suppression HomeView), Lot AD (subject-list), Lot AE (`SubjectsView`/`SimulationView` supprimés + tag Phase 6). |
 | 2026-04-25 | Codex | Phase 6 code OK : lots AB→AE commités, `HomeView`, `SubjectsView`, `SimulationView` supprimés/inlinés dans les routes, composants subject déplacés vers `features/subject-list`, test `TasksNotes` déplacé vers `features/home-widgets`. Tests 181 + build OK. Smoke cockpit/subjects/simulation et tag `phase-6-done` en attente. Phase 7 cadrée en lots AF→AM. |
 | 2026-04-25 | Codex | Correction hors refactor : restauration du teaser `À venir` supprimé en Phase 4. Ajout d'une vraie route Next `/coming` et retour de l'item de nav `À venir` avec `Sparkles`, sans réintroduire `ViewContext`. |
-| 2026-04-25 | Codex | Phase 7 AF→AH code OK : `SessionWidget` découpé/déplacé vers `features/session-widget`, `StrategyModal` déplacé vers `features/strategy-picker` avec `ModeTabs` + `SubjectMultiSelect`. Tests 181 + build OK. Smokes accumulés : cockpit, subjects, simulation, `/coming`, session, stratégie. |
+| 2026-04-25 | Codex | Phase 7 AF→AI code OK : `SessionWidget` découpé/déplacé vers `features/session-widget`, `StrategyModal` déplacé vers `features/strategy-picker` avec `ModeTabs` + `SubjectMultiSelect`, `entities/simulation/*` ajouté en dormant avec tests purs (`extractErrorCapture`, `buildAnkiTsv`). Tests 181→189 + build OK. Smokes accumulés : cockpit, subjects, simulation, `/coming`, session, stratégie. |
