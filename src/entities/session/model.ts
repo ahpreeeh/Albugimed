@@ -167,6 +167,10 @@ export function getTargetSubjects(strategy: ActiveStrategy, subjects: Subject[])
  *   standard  : 1 nouveau + 1 entretien + 1 révision (prefers easy: blue/green/unknown)
  *   plafond   : 1-3 nouveaux + 1 entretien + 1 révision (prefers hard: red/orange)
  *
+ * Plafond rule : on saute la tâche `cours` (apprentissage) — l'utilisateur en
+ * mode intensif tape direct dans les annales. Les chapitres `nouveau` ne
+ * produisent donc qu'une annale L1, pas la paire cours+annale L1.
+ *
  * Fallback : if zero nouveaux were picked and the task list is empty,
  * append up to 2 entries from entretiens+revisions with their natural reason.
  */
@@ -282,6 +286,14 @@ export function generateDailyTasks(
         for (const p of fallback) {
             tasks.push(...buildChapterTasks(p.subject, p.chapter, p.reason, makeId));
         }
+    }
+
+    // Plafond : drop les tâches `cours` (mode intensif = annales uniquement).
+    // Le filtre est appliqué EN BOUT DE CHAÎNE pour garder buildChapterTasks
+    // ignorant de la load — la règle métier de "skip cours" est purement
+    // une concern de generateDailyTasks.
+    if (load === 'plafond') {
+        return tasks.filter(t => t.taskType !== 'cours');
     }
 
     return tasks;

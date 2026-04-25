@@ -399,7 +399,7 @@ describe('generateDailyTasks', () => {
     });
 
     // ── plafond ──
-    it('plafond : jusqu\'à 3 nouveaux + 1 entretien + 1 revision', () => {
+    it('plafond : jusqu\'à 3 nouveaux + 1 entretien + 1 revision (cours skippé en intensif)', () => {
         resetIdCounter();
         const subject = makeSubject('s1', [
             makeChapter('n1'), makeChapter('n2'), makeChapter('n3'), makeChapter('n4'),
@@ -413,9 +413,45 @@ describe('generateDailyTasks', () => {
         const tasks = generateDailyTasks(strategy, [subject], 'plafond', {
             now: FIXED_NOW, makeId: deterministicMakeId,
         });
-        // 3 nouveaux (6) + 1 entretien (1) + 1 revision (1) = 8
-        expect(tasks).toHaveLength(8);
-        expect(tasks.filter(t => t.reason === 'nouveau')).toHaveLength(6);
+        // 3 nouveaux × 1 (annale L1 seule, cours skippé) + 1 entretien + 1 revision = 5
+        expect(tasks).toHaveLength(5);
+        expect(tasks.filter(t => t.reason === 'nouveau')).toHaveLength(3);
+        // Bug guard : aucune tâche cours en plafond, jamais
+        expect(tasks.filter(t => t.taskType === 'cours')).toHaveLength(0);
+    });
+
+    it('plafond : aucune tâche `cours` même quand un chapitre `nouveau` est ciblé', () => {
+        resetIdCounter();
+        const subject = makeSubject('s1', [makeChapter('n1')]); // un seul nouveau, rien d'autre
+        const strategy = makeStrategy({ preparationSubjectIds: ['s1'] });
+
+        const tasks = generateDailyTasks(strategy, [subject], 'plafond', {
+            now: FIXED_NOW, makeId: deterministicMakeId,
+        });
+
+        // 1 chapitre nouveau → seulement annale L1 (pas la paire cours+annale)
+        expect(tasks).toHaveLength(1);
+        expect(tasks[0]).toMatchObject({
+            taskType: 'annale',
+            annaleLevel: 1,
+            reason: 'nouveau',
+        });
+    });
+
+    it('standard et plancher conservent la tâche `cours` pour les nouveaux chapitres', () => {
+        resetIdCounter();
+        const subject = makeSubject('s1', [makeChapter('n1')]);
+        const strategy = makeStrategy({ preparationSubjectIds: ['s1'] });
+
+        const standardTasks = generateDailyTasks(strategy, [subject], 'standard', {
+            now: FIXED_NOW, makeId: deterministicMakeId,
+        });
+        expect(standardTasks.filter(t => t.taskType === 'cours')).toHaveLength(1);
+
+        const plancherTasks = generateDailyTasks(strategy, [subject], 'plancher', {
+            now: FIXED_NOW, makeId: deterministicMakeId,
+        });
+        expect(plancherTasks.filter(t => t.taskType === 'cours')).toHaveLength(1);
     });
 
     it('plafond : préfère révisions red/orange plutôt que blue/green', () => {
