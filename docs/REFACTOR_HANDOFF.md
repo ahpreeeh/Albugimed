@@ -22,7 +22,7 @@
 | HEAD de la branche refactor | Phase 6 cadrée — confirmer avec `git log --oneline -10` |
 | Remote push | **non pushé** — tout est local |
 | Tests | 13 fichiers / **181 tests** / 0 échec |
-| Build Next.js | ✅ OK (10 routes statiques) |
+| Build Next.js | ✅ OK (11 routes statiques avec `/coming`) |
 | Smoke test Phase 1 | ✅ validé 2026-04-19 |
 | Smoke test Phase 2 Lot H + K | ✅ validés 2026-04-20 |
 | Smoke test Phase 3 Lot Q + R | ✅ validés (Q: 2026-04-20, R: 2026-04-25) |
@@ -210,6 +210,7 @@ Prochain lot autorisé en semi-autonome : **Phase 7 Lot AF** (`7.1 → 7.3`) —
 4. Tâches rapides et notes rapides créables/supprimables
 5. Dernières erreurs cliquent vers `/simulation`
 6. SessionWidget + WeeklyTracker toujours visibles
+7. `/coming` charge le teaser `À venir`
 
 ### État pré-suite
 
@@ -217,7 +218,7 @@ Prochain lot autorisé en semi-autonome : **Phase 7 Lot AF** (`7.1 → 7.3`) —
 - `src/types/strategy.ts` : supprimé au step 2.10 (commit `94b83d3`).
 - `src/types/planning.ts` : supprimé au step 5.8 (commit `b7773c3`).
 - `src/types/` ne contient plus que `index.ts` (types divers : `ChatMessage`, `ErrorEntry`, `Flashcard`, `MedPilotBackup`, `ImportResult`).
-- Tests : 13 fichiers / 181 verts. Build Next.js clean. 10 routes statiques.
+- Tests : 13 fichiers / 181 verts. Build Next.js clean. 11 routes statiques.
 
 ---
 
@@ -534,3 +535,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-25 | Codex | Reprise après limite d'usage Claude. Audit réel : HEAD `fe9f48c`, Lot Z déjà commit, worktree laissé au début du Lot AA (`planning/page.tsx`, `PlanningContext.tsx`, `RecurrentSlotDialog.tsx` modifiés). Les deux anciens findings P1 sur `entities/session/store.ts` sont bien corrigés. Step 5.7 commit `652b928` : `/planning` devient l'orchestrateur direct des features. Step 5.8 codé : suppression de `src/components/views/PlanningView.tsx` et `src/types/planning.ts`, derniers imports planning repointés vers `entities/planning`. `npm test` 13 fichiers / 181 tests OK, `npm run build` OK. **Stop requis pour smoke vital Phase 5** avant tag `phase-5-done`. |
 | 2026-04-25 | Codex | Smoke vital Phase 5 validé par le user. Tag `phase-5-done` posé sur `b7773c3`. Handoff mis à jour pour cadrer la Phase 6 : Lot AB (`HomeView` widgets), Lot AC (`cockpit/page.tsx` final + suppression HomeView), Lot AD (subject-list), Lot AE (`SubjectsView`/`SimulationView` supprimés + tag Phase 6). |
 | 2026-04-25 | Codex | Phase 6 code OK : lots AB→AE commités, `HomeView`, `SubjectsView`, `SimulationView` supprimés/inlinés dans les routes, composants subject déplacés vers `features/subject-list`, test `TasksNotes` déplacé vers `features/home-widgets`. Tests 181 + build OK. Smoke cockpit/subjects/simulation et tag `phase-6-done` en attente. Phase 7 cadrée en lots AF→AM. |
+| 2026-04-25 | Codex | Correction hors refactor : restauration du teaser `À venir` supprimé en Phase 4. Ajout d'une vraie route Next `/coming` et retour de l'item de nav `À venir` avec `Sparkles`, sans réintroduire `ViewContext`. |

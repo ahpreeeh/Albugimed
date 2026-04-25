@@ -14,18 +14,18 @@ import {
     Calendar,
     Settings2,
     Settings,
+    Sparkles,
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────
 // Phase 4 step 4.5 : items utilisent maintenant des paths Next.js réels.
 // Les anciens id ViewType ont disparu avec ViewContext (Lot V).
-// Le "À venir" est retiré — il n'avait pas de route et son setActiveView
-// n'était jamais appelé (dead UX).
 const navItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { href: "/cockpit",    label: "Aujourd'hui", icon: LayoutGrid },
     { href: "/subjects",   label: "Matières",    icon: BookOpen },
     { href: "/simulation", label: "Simulation",  icon: GraduationCap },
     { href: "/planning",   label: "Planning",    icon: Calendar },
+    { href: "/coming",     label: "À venir",     icon: Sparkles },
 ];
 
 // ─── Top Navigation Bar ───────────────────────────────────────────────
