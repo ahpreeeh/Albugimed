@@ -2,8 +2,8 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-25 (Phase 3 clôturée — tag `phase-3-done` posé après smoke R + 2 fix bonus)
-**Mise à jour par** : Claude (session reprise, fix logique métier plafond + clôture Phase 3)
+**Dernière mise à jour** : 2026-04-25 (Phase 4 clôturée + Phase 5 Lots W/X/Y faits — extraction PlanningView en cours)
+**Mise à jour par** : Claude (session enchaînement semi-autonome)
 
 ---
 
@@ -16,20 +16,33 @@
 | Tag de rollback | `backup/pre-refactor-v2` (HEAD pristine de `main` avant tout refactor) |
 | Tag fin Phase 1 | `phase-1-done` sur `e853cac` |
 | Tag fin Phase 2 | `phase-2-done` sur `94b83d3` |
-| Tag fin Phase 3 | `phase-3-done` sur `69666c7` (HEAD courant) |
-| HEAD de la branche refactor | `69666c7` — `fix(migration): add med-pilot-daily-session to KNOWN_KEYS` |
+| Tag fin Phase 3 | `phase-3-done` sur `69666c7` |
+| Tag fin Phase 4 | `phase-4-done` sur `2ce3d73` |
+| HEAD de la branche refactor | `2123d5c` — `refactor(phase-5): step 5.4 — extract EventModal + GridBlock` |
 | Remote push | **non pushé** — tout est local |
-| Tests | 12 fichiers / **144 tests** / 0 échec |
-| Build Next.js | ✅ OK (6 routes statiques, middleware 79.6 kB — inchangé depuis Phase 1) |
-| Smoke test Phase 1 | ✅ validé 2026-04-19 (modifs dans l'app, pas de crash, sauvegarde Supabase OK) |
-| Smoke test Phase 2 Lot H | ✅ validé 2026-04-20 (SubjectContext migré sur api.ts, persistance OK) |
-| Smoke test Phase 2 Lot K | ✅ validé 2026-04-20 (Strategy migrée, recharge + modification OK) |
-| Smoke test Phase 3 Lot Q | ✅ validé 2026-04-20 (façade Zustand : génération, timer, progression et refresh OK) |
-| Smoke test Phase 3 Lot R | ✅ validé 2026-04-25 (consommateurs branchés directement sur Zustand) |
+| Tests | 13 fichiers / **181 tests** / 0 échec |
+| Build Next.js | ✅ OK (10 routes statiques) |
+| Smoke test Phase 1 | ✅ validé 2026-04-19 |
+| Smoke test Phase 2 Lot H + K | ✅ validés 2026-04-20 |
+| Smoke test Phase 3 Lot Q + R | ✅ validés (Q: 2026-04-20, R: 2026-04-25) |
+| Smoke test Phase 4 Lot T + U + V | ✅ validés 2026-04-25 (routes + nav + timer cross-route) |
+| Smoke test Phase 5 | ⏳ **dette accumulée** : Lots W/X (additif sûr) + Lot Y (modifie imports PlanningView, JSX inchangée). À valider avant Lot Z (extraction des view modes — risque plus élevé). |
 
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+2123d5c refactor(phase-5): step 5.4 — extract EventModal + GridBlock to features/planning-grid
+e8f5971 refactor(phase-5): step 5.3 — entities/planning/hooks facade
+e6f1e44 refactor(phase-5): step 5.1-5.2 — extract Planning types and model + tests
+2ce3d73 fix(session): preserve task timer across route navigations   ← phase-4-done
+1c28743 refactor(phase-4): steps 4.7-4.8 — providers at root, visual shell at (app)
+6750610 refactor(phase-4): steps 4.5-4.6 — TopNav and HomeView use real routes
+d5d9122 refactor(phase-4): steps 4.2-4.4 — real Next.js routes for the 4 views
+3fe81b6 feat(session): make daily session reset button always visible
+e3e2bb1 fix(session): scale plafond entretien/revision quotas to 3 each
+65035ce refactor(phase-4): step 4.1 — reserve (app) route group with dormant layout
+5b92fee docs(refactor): correct stale Phase 3 closure note
+9b2c00e docs(refactor): close Phase 3 + plan Phase 4 lots
 69666c7 fix(migration): add med-pilot-daily-session to KNOWN_KEYS   ← phase-3-done
 6c033e5 fix(session): drop cours task in plafond/intensif mode
 d2bcae4 fix(session): add targeted reset for completed daily session
@@ -166,31 +179,40 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochaine action à exécuter — **Phase 4 : vraies routes Next.js**
+## 4. Prochaine action à exécuter — **Smoke Phase 5 (état Lot Y) + suite découpe PlanningView**
 
-Phase 3 **clôturée** le 2026-04-25. Tag `phase-3-done` sur `69666c7`. Smoke R validé. Deux fixes bonus posés en clôture :
+Phase 4 **clôturée** le 2026-04-25 (tag `phase-4-done` sur `2ce3d73`). Smoke V validé : routes réelles, providers au RootLayout, timer cross-route fonctionne (fix bonus `2ce3d73` posé pendant le smoke).
 
-1. **`6c033e5` fix(session): drop cours task in plafond/intensif mode** — bug logique métier pré-existant (préservé 1:1 par le refactor) : en charge plafond, les chapitres `nouveau` produisaient `cours + annale L1` comme dans plancher/standard. L'intensif est censé sauter l'apprentissage. Filtre ajouté en bout de `generateDailyTasks`. 2 tests régression + 1 test mis à jour. Plancher/standard inchangés.
-2. **`69666c7` fix(migration): add med-pilot-daily-session to KNOWN_KEYS** — clôture de l'attention point #3 §5c. La clé de session du jour était absente de `useMigration.ts` → un navigateur jamais migré aurait perdu sa session locale. Désormais migrée comme les autres `med-pilot-*`.
+Phase 5 partiellement avancée :
 
-### Phase 4 — Vraies routes Next.js (1 jour, plan §Phase 4)
+| Lot | Steps | Statut | Effet |
+|---|---|---|---|
+| W | 5.1 + 5.2 | ✅ `e6f1e44` | `entities/planning/{types,model}.ts` + 35 tests unitaires (parseNLPInput, layoutOverlaps, time helpers, etc.). `src/types/planning.ts` reste en BC shim. |
+| X | 5.3 | ✅ `e8f5971` | `entities/planning/hooks.ts` façade (re-export PlanningContext). Pas d'`api.ts` car PlanningContext déjà sur `useCloudValue`. |
+| Y | 5.4 | ✅ `2123d5c` | Extraction `EventModal` + `GridBlock` + `styles.ts` vers `features/planning-grid/`. PlanningView.tsx passe de 1424 → 1020 lignes (-404). Imports migrés vers `@/entities/planning/{types,model}` et `@/features/planning-grid/*`. JSX inchangée. |
+| Z | 5.5 + 5.6 | ⏳ | Casser les 3 view modes : `features/planning-calendar/MonthlyCalendar`, `features/planning-recurrent/RecurrentSlotsList`, `features/planning-grid/PlanningGrid` (week view + drag-drop + NLPQuickAdd). Risque moyen. |
+| AA | 5.7 + 5.8 | ⏳ | Orchestrateur `app/(app)/planning/page.tsx` (~80 lig) + suppression de `src/components/views/PlanningView.tsx` + `src/types/planning.ts` (BC shim). Migrer les ~20 imports `@/context/PlanningContext` → `@/entities/planning/hooks`. **Smoke vital**. Tag `phase-5-done`. |
 
-Objectif : passer de `ViewContext` + `page.tsx` switch à de vraies routes App Router. Débloque URL partageables, back/forward, code splitting, prefetching.
+### Smoke test Phase 5 à faire avant Lot Z
 
-**Risque** : **moyen** — la migration des routes touche le shell de l'app + le middleware d'auth. Smoke obligatoire après chaque sous-lot.
+Risque : Lot Y a modifié les imports de PlanningView mais pas la JSX. La route `/planning` doit fonctionner exactement comme avant. Test rapide :
 
-**Fichiers critiques à lire avant** :
-- `src/middleware.ts` (matcher d'auth — `/login` et `/restore` doivent rester hors `(app)`)
-- `src/components/layout/LayoutShell.tsx` (5 niveaux de providers actuels)
-- `src/context/ViewContext.tsx` (sera supprimé)
-- `src/components/layout/TopNav.tsx` (passera de `useView()` à `usePathname()` + `useRouter()`)
+1. Login → naviguer vers `/planning`
+2. Mode "Semaine" : la grille s'affiche, les événements de la semaine apparaissent à leur emplacement, drag-and-drop d'un événement vers un autre créneau marche
+3. Cliquer sur un bloc d'événement → `EventModal` s'ouvre, modifier l'heure → save → l'événement se replace correctement
+4. Mode "Calendrier" : grille mensuelle, événements apparaissent
+5. Mode "Récurrents" : liste des slots récurrents, créer/éditer/désactiver un slot
+6. Quick-add NLP en haut : taper "Révision cardio demain 14h" → un événement se crée
 
-**Plan d'attaque** : voir §5d ci-dessous.
+Si tout marche → enchaîner Lot Z autonomement (pas de smoke intermédiaire car juste de l'extraction de composants déjà testés). Si quelque chose flicker → diagnostic ciblé sur l'import incriminé.
 
-### État pré-Phase-4
+### État pré-suite
 
-- `src/types/session.ts` : déjà supprimé au step 3.8 (commit `416fcc6`) — pas de clean-up nécessaire.
-- `src/types/` ne contient plus que `index.ts` (types divers `ChatMessage`, `ErrorEntry`, `Flashcard`, `MedPilotBackup`, `ImportResult`) et `planning.ts` (à migrer en Phase 5 vers `entities/planning/types.ts`).
+- `src/types/session.ts` : supprimé au step 3.8 (commit `416fcc6`).
+- `src/types/strategy.ts` : supprimé au step 2.10 (commit `94b83d3`).
+- `src/types/planning.ts` : encore en place comme BC shim (re-export depuis entities), à supprimer en Lot AA.
+- `src/types/` ne contient plus que `index.ts` (types divers : `ChatMessage`, `ErrorEntry`, `Flashcard`, `MedPilotBackup`, `ImportResult`) et `planning.ts` (BC shim).
+- Tests : 13 fichiers / 181 verts. tsc + build clean. 10 routes statiques.
 - Tests : 144 verts, build green, tsc clean. Aucun warning à traiter.
 
 ---
@@ -303,15 +325,46 @@ Phase 4 = transformation du pseudo-routing `useView()` en vraies routes Next.js 
 
 **À ne PAS oublier** : lire `src/middleware.ts` AVANT le lot T pour confirmer que le matcher couvre bien `/cockpit /subjects /planning /simulation` et exclut `/login /restore`. Ajuster si besoin avant le smoke.
 
-### Critères de succès Phase 4
+### Critères de succès Phase 4 (bilan réel)
 
-- [ ] 4 routes `(app)/cockpit /subjects /planning /simulation` créées et visibles dans l'URL
-- [ ] `src/context/ViewContext.tsx` supprimé
-- [ ] `TopNav.tsx` utilise `usePathname()` + `<Link>`
-- [ ] `AppProviders` instancié 1× dans `app/layout.tsx` racine — stores survivent à la navigation
-- [ ] Middleware d'auth : `/login` et `/restore` toujours publiques, autres routes protégées
-- [ ] Tag `phase-4-done` posé
-- [ ] Smoke complet : login → 4 routes → reload chacune → back/forward → état préservé
+- [x] 4 routes `(app)/cockpit /subjects /planning /simulation` créées et visibles dans l'URL
+- [x] `src/context/ViewContext.tsx` supprimé (Lot V)
+- [x] `TopNav.tsx` utilise `usePathname()` + `<Link>` (Lot U)
+- [x] `AppProviders` instancié 1× dans `app/layout.tsx` racine via `src/app/providers.tsx` (Lot V)
+- [x] Middleware d'auth ajusté : redirect direct `/login → /cockpit` (Lot T)
+- [x] Tag `phase-4-done` posé sur `2ce3d73`
+- [x] Smoke complet validé user 2026-04-25
+- [x] Bonus : fix timer cross-navigation (`2ce3d73`) — pré-existant, ne resettait pas grâce au `startedAt` persisté
+- [x] Bonus : fichiers morts supprimés (`LayoutShell.tsx`, `SidebarLeft.tsx`)
+
+---
+
+## 5e. Plan des lots pour la Phase 5
+
+Phase 5 = découpe du fichier monstre `src/components/views/PlanningView.tsx` (1424 lig) selon le plan §Phase 5 du `REFACTOR_PLAN.md`. Pattern Phase 3 reproduit : foundation + extractions additives, puis flip-switch final.
+
+| Lot | Steps | Ce qu'il contient | Risque | Smoke |
+|---|---|---|---|---|
+| **W** | 5.1 + 5.2 | `entities/planning/types.ts` (move + BC shim) + `entities/planning/model.ts` (parseNLPInput, time helpers, layoutOverlaps, date utils) + tests (35 tests). PlanningView non touché — ses copies inline restent. | faible (pure addition) | non |
+| **X** | 5.3 | `entities/planning/hooks.ts` façade. Pas d'`api.ts` (PlanningContext déjà sur `useCloudValue`). | faible (pure addition) | non |
+| **Y** | 5.4 | Extraction `EventModal` + `GridBlock` + `styles.ts` vers `features/planning-grid/`. Migration imports PlanningView vers `@/entities/planning/*` et `@/features/planning-grid/*`. JSX inchangée, `-404 lig` dans PlanningView. | **moyen** (modifie imports) | **smoke léger** : naviguer `/planning`, ouvrir EventModal, drag-drop |
+| **Z** | 5.5 + 5.6 | Extraction des 3 view modes : `features/planning-grid/PlanningGrid` (week + drag-drop + NLP quick-add), `features/planning-calendar/MonthlyCalendar`, `features/planning-recurrent/RecurrentSlotsList`. PlanningView devient un orchestrateur conditionnel sur `viewMode`. | **moyen+** | **obligatoire** : tester chaque mode + transitions |
+| **AA** | 5.7 + 5.8 | Création de `app/(app)/planning/page.tsx` orchestrateur (~80 lig). Migration des ~20 imports `@/context/PlanningContext` → `@/entities/planning/hooks`. Suppression de `src/components/views/PlanningView.tsx` + `src/types/planning.ts` (BC shim). | **moyen+** ⚠ | **vital** + tag `phase-5-done` |
+
+**Ordre strict** : W → X → Y (smoke léger après) → Z (smoke obligatoire) → AA (smoke vital + tag).
+
+**Chainable autonomement** : W + X + Y (sont sûrs). Stop pour smoke léger avant Z, smoke vital avant AA.
+
+### Critères de succès Phase 5
+
+- [x] `entities/planning/{types,model,hooks}.ts` + `__tests__/model.test.ts` existent
+- [ ] `features/planning-grid/`, `features/planning-calendar/`, `features/planning-recurrent/` peuplés
+- [ ] `src/components/views/PlanningView.tsx` supprimé
+- [ ] `src/types/planning.ts` (BC shim) supprimé
+- [ ] `app/(app)/planning/page.tsx` ≤ 80 lig (orchestrateur)
+- [ ] Aucun fichier du module ne dépasse 250 lig (objectif plan)
+- [ ] Tests planning : 35+ unitaires (model) — déjà fait
+- [ ] Tag `phase-5-done` posé après smoke vital
 
 ---
 
@@ -427,3 +480,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-20 | Codex | Audit + reprise Phase 3. État réel resynchronisé avec le dépôt : steps 3.1 à 3.4 déjà commités (`633ac86`, `f0482f8`, `ce66928`, `143b04e`). Step 3.5 commit `147bff8` : store Zustand dormant + tests renforcés. Deux bugs critiques corrigés avant commit : réhydratation qui conservait un état mémoire obsolète et course asynchrone pouvant perdre des entrées d'historique. Step 3.6 commit `7c86fa1` : selectors Zustand dormants (`entities/session/hooks.ts`). Step 3.7 commit `847992e` : `SessionEngineContext.tsx` devient façade sur Zustand, API publique conservée, build + 142 tests OK. Smoke test utilisateur du lot Q validé ensuite (génération, timer, progression, refresh OK). Step 3.8 codé localement : `SessionWidget` branché directement sur les selectors Zustand, provider retiré de `LayoutShell`, `SessionEngineContext.tsx` et `src/types/session.ts` supprimés, build + 142 tests OK. **Stop ici en attente du smoke test utilisateur du lot R** avant clôture de la Phase 3. |
 | 2026-04-20 | Codex | Déblocage minimal pour le smoke test Phase 3 : ajout d'un bouton UI `Réinitialiser la session du jour` dans l'état "Toutes les sessions sont terminées". Il appelle le `clearSession()` déjà existant et ne touche qu'à `med-pilot-daily-session` ; historique, matières, stratégie et session timing restent inchangés. Objectif unique : permettre de regénérer une session du jour sans modifier le comportement métier normal hors reset ciblé. |
 | 2026-04-25 | Claude (session reprise, semi-autonome souple) | **Phase 3 clôturée**. Smoke test Lot R validé par le user. Deux fixes posés en clôture : (1) `6c033e5 fix(session): drop cours task in plafond/intensif mode` — bug logique métier pré-existant détecté pendant le smoke (`plafond` proposait `cours+annale L1` au lieu d'annales seules). Filtre ajouté en bout de `generateDailyTasks`, plancher/standard inchangés, 1 test mis à jour + 2 tests régression ajoutés. (2) `69666c7 fix(migration): add med-pilot-daily-session to KNOWN_KEYS` — clôture de l'attention point #3 §5c. Tests 142 → **144**, tsc/build green. Tag `phase-3-done` posé sur `69666c7`. **Phase 4 cadrée** : 4 lots S→V (voir §5d), routing Next.js App Router. Risque moyen, smoke obligatoire à T et V. |
+| 2026-04-25 | Claude (semi-autonome enchaîné) | **Phase 4 clôturée + Phase 5 démarrée**. (a) Phase 4 lots S→V codés et smoke validé : route group `(app)/`, 4 vraies routes Next, redirect `/`→`/cockpit`, middleware ajusté, providers extraits au RootLayout via `app/providers.tsx`, shell visuelle dans `(app)/layout.tsx`, suppression `LayoutShell` + `ViewContext` + `SidebarLeft`. Bonus : fix logique métier `plafond` (quotas entretien/revision passés à 3 max), bouton reset always-visible, fix timer cross-navigation (dérivé de `task.startedAt` persisté au lieu de refs locales React). Tag `phase-4-done` sur `2ce3d73`. (b) Phase 5 lots W (foundation `entities/planning/{types,model}` + 35 tests), X (hooks façade), Y (extract `EventModal`+`GridBlock`+`styles` vers `features/planning-grid/`, PlanningView passe de 1424 → 1020 lignes). Tests 144 → **181**, tsc/build green. **Stop ici en attente du smoke léger Phase 5** (vérifier route `/planning` post-Lot Y) avant Lot Z (extraction des 3 view modes — risque +). |
