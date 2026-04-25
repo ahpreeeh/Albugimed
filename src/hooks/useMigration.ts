@@ -21,7 +21,8 @@ const KNOWN_KEYS: string[] = [
   "med-pilot-subjects-v4",
   // StrategyContext
   "med-pilot-active-strategy",
-  // SessionEngineContext
+  // SessionEngineContext / Session store
+  "med-pilot-daily-session",
   "med-pilot-session-history",
   // SessionWidget (timing)
   "med-pilot-session-timing",
