@@ -2,7 +2,7 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-25 (Phase 5 Lot AA codé — smoke vital requis)
+**Dernière mise à jour** : 2026-04-25 (Phase 5 clôturée + Phase 6 cadrée)
 **Mise à jour par** : Codex (audit reprise + finalisation semi-autonome)
 
 ---
@@ -18,7 +18,8 @@
 | Tag fin Phase 2 | `phase-2-done` sur `94b83d3` |
 | Tag fin Phase 3 | `phase-3-done` sur `69666c7` |
 | Tag fin Phase 4 | `phase-4-done` sur `2ce3d73` |
-| HEAD de la branche refactor | Phase 5 Lot AA en cours — confirmer avec `git log --oneline -10` |
+| Tag fin Phase 5 | `phase-5-done` sur `b7773c3` |
+| HEAD de la branche refactor | Phase 6 cadrée — confirmer avec `git log --oneline -10` |
 | Remote push | **non pushé** — tout est local |
 | Tests | 13 fichiers / **181 tests** / 0 échec |
 | Build Next.js | ✅ OK (10 routes statiques) |
@@ -26,11 +27,12 @@
 | Smoke test Phase 2 Lot H + K | ✅ validés 2026-04-20 |
 | Smoke test Phase 3 Lot Q + R | ✅ validés (Q: 2026-04-20, R: 2026-04-25) |
 | Smoke test Phase 4 Lot T + U + V | ✅ validés 2026-04-25 (routes + nav + timer cross-route) |
-| Smoke test Phase 5 | ⏳ **requis après Lot AA** : la route `/planning` est maintenant branchée directement sur les features Planning, sans `PlanningView.tsx` ni shim `src/types/planning.ts`. |
+| Smoke test Phase 5 | ✅ validé 2026-04-25 (`/planning`, 3 modes, modal, drag/drop, récurrents, quick-add NLP) |
 
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+b7773c3 refactor(phase-5): step 5.8 — delete PlanningView and planning shim   ← phase-5-done
 652b928 refactor(phase-5): step 5.7 — route planning page orchestrates features
 fe9f48c refactor(phase-5): step 5.5-5.6 — extract 3 view modes to features/planning-*
 dfce812 fix(styles): include entities + features in Tailwind content paths and cap modal height
@@ -183,38 +185,35 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochaine action à exécuter — **Smoke Phase 5 (état Lot Y) + suite découpe PlanningView**
+## 4. Prochaine action à exécuter — **Phase 6 Lot AB**
 
-Phase 4 **clôturée** le 2026-04-25 (tag `phase-4-done` sur `2ce3d73`). Smoke V validé : routes réelles, providers au RootLayout, timer cross-route fonctionne (fix bonus `2ce3d73` posé pendant le smoke).
+Phase 5 **clôturée** le 2026-04-25 (tag `phase-5-done` sur `b7773c3`). Smoke vital validé : `/planning` fonctionne après suppression de `PlanningView.tsx` et du shim `src/types/planning.ts`.
 
-Phase 5 partiellement avancée :
+Phase 6 cible les trois vues restantes encore dans `src/components/views/` : `HomeView`, `SubjectsView`, `SimulationView`.
 
-| Lot | Steps | Statut | Effet |
+| Lot | Steps | Statut | Effet attendu |
 |---|---|---|---|
-| W | 5.1 + 5.2 | ✅ `e6f1e44` | `entities/planning/{types,model}.ts` + 35 tests unitaires (parseNLPInput, layoutOverlaps, time helpers, etc.). `src/types/planning.ts` reste en BC shim. |
-| X | 5.3 | ✅ `e8f5971` | `entities/planning/hooks.ts` façade (re-export PlanningContext). Pas d'`api.ts` car PlanningContext déjà sur `useCloudValue`. |
-| Y | 5.4 | ✅ `2123d5c` | Extraction `EventModal` + `GridBlock` + `styles.ts` vers `features/planning-grid/`. PlanningView.tsx passe de 1424 → 1020 lignes (-404). Imports migrés vers `@/entities/planning/{types,model}` et `@/features/planning-grid/*`. JSX inchangée. |
-| Z | 5.5 + 5.6 | ✅ `fe9f48c` | Les 3 view modes sont extraits : `features/planning-calendar/MonthlyCalendar`, `features/planning-recurrent/RecurrentSlotsList`, `features/planning-grid/PlanningGrid`. `PlanningView.tsx` est devenu un orchestrateur fin. |
-| AA | 5.7 + 5.8 | ⚠️ code OK, smoke requis | `app/(app)/planning/page.tsx` est l'orchestrateur direct. `src/components/views/PlanningView.tsx` + `src/types/planning.ts` supprimés. Imports finaux repointés vers `@/entities/planning/*`. `npm test` + `npm run build` OK. **Smoke vital** avant tag `phase-5-done`. |
+| AB | 6.1 → 6.4 | ⏳ | Extraire depuis `HomeView.tsx` : `StatsBar`, `EdnCountdown`, `TasksNotes`, `RecentErrors` vers `features/home-widgets/`. Risque faible, composants déjà isolés dans le fichier. |
+| AC | 6.5 | ⏳ | Remplacer `cockpit/page.tsx` par l'assemblage direct des widgets, puis supprimer `HomeView.tsx`. Risque moyen, smoke cockpit requis. |
+| AD | 6.6 | ⏳ | Déplacer les composants subject vers `features/subject-list/`. Risque faible. |
+| AE | 6.7 | ⏳ | Remplacer `SubjectsView` et `SimulationView` par leurs pages, puis supprimer les vues. Risque moyen, smoke final Phase 6 requis + tag `phase-6-done`. |
 
-### Smoke test Phase 5 à faire après Lot AA
+### Smoke Phase 6 à accumuler puis valider
 
-Risque : Lot Z a extrait les 3 modes et Lot AA branche `/planning` directement sur ces features. La route `/planning` doit fonctionner exactement comme avant. Test rapide :
+À faire au plus tard après AC, ou plus tôt si une régression visible apparaît :
 
-1. Login → naviguer vers `/planning`
-2. Mode "Semaine" : la grille s'affiche, les événements de la semaine apparaissent à leur emplacement, drag-and-drop d'un événement vers un autre créneau marche
-3. Cliquer sur un bloc d'événement → `EventModal` s'ouvre, modifier l'heure → save → l'événement se replace correctement
-4. Mode "Calendrier" : grille mensuelle, événements apparaissent
-5. Mode "Récurrents" : liste des slots récurrents, créer/éditer/désactiver un slot
-6. Quick-add NLP en haut : taper "Révision cardio demain 14h" → un événement se crée
-
-Si tout marche → tag `phase-5-done`, puis passer à la Phase 6. Si quelque chose flicker → diagnostic ciblé sur le mode Planning concerné.
+1. `/cockpit` charge sans crash
+2. Stats matières inchangées
+3. Date EDN lisible/modifiable
+4. Tâches rapides et notes rapides créables/supprimables
+5. Dernières erreurs cliquent vers `/simulation`
+6. SessionWidget + WeeklyTracker toujours visibles
 
 ### État pré-suite
 
 - `src/types/session.ts` : supprimé au step 3.8 (commit `416fcc6`).
 - `src/types/strategy.ts` : supprimé au step 2.10 (commit `94b83d3`).
-- `src/types/planning.ts` : supprimé en Lot AA.
+- `src/types/planning.ts` : supprimé au step 5.8 (commit `b7773c3`).
 - `src/types/` ne contient plus que `index.ts` (types divers : `ChatMessage`, `ErrorEntry`, `Flashcard`, `MedPilotBackup`, `ImportResult`).
 - Tests : 13 fichiers / 181 verts. Build Next.js clean. 10 routes statiques.
 
@@ -367,7 +366,34 @@ Phase 5 = découpe du fichier monstre `src/components/views/PlanningView.tsx` (1
 - [x] `app/(app)/planning/page.tsx` ≤ 80 lig (73 lignes)
 - [ ] Aucun fichier du module ne dépasse 250 lig (reste à traiter : `PlanningGrid.tsx` 365 lignes, `MonthlyCalendar.tsx` 308 lignes)
 - [ ] Tests planning : 35+ unitaires (model) — déjà fait
-- [ ] Tag `phase-5-done` posé après smoke vital
+- [x] Tag `phase-5-done` posé sur `b7773c3` après smoke vital
+
+---
+
+## 5f. Plan des lots pour la Phase 6
+
+Phase 6 = suppression progressive des vues restantes dans `src/components/views/`.
+
+| Lot | Étapes | Ce qu'il contient | Risque | Smoke |
+|---|---|---|---|---|
+| **AB** | 6.1 → 6.4 | `features/home-widgets/{StatsBar,EdnCountdown,TasksNotes,RecentErrors}.tsx`. Extraction depuis `HomeView.tsx` sans changer la JSX. | faible | regroupable |
+| **AC** | 6.5 | `app/(app)/cockpit/page.tsx` assemble directement les widgets cockpit, puis suppression de `HomeView.tsx`. | moyen | cockpit requis |
+| **AD** | 6.6 | Déplacer `SubjectCard`, `AddSubjectModal`, `SubjectDetailModal` vers `features/subject-list/`. | faible | regroupable |
+| **AE** | 6.7 | `subjects/page.tsx` et `simulation/page.tsx` deviennent les pages finales, suppression de `SubjectsView.tsx` et `SimulationView.tsx`. | moyen | phase requis |
+
+**Ordre strict** : AB → AC → AD → AE (smoke + tag `phase-6-done`).
+
+### Critères de succès Phase 6
+
+- [ ] `features/home-widgets/` contient les widgets cockpit extraits
+- [ ] `src/components/views/HomeView.tsx` supprimé
+- [ ] `features/subject-list/` contient les composants subject
+- [ ] `src/components/views/{SubjectsView,SimulationView}.tsx` supprimés
+- [ ] `src/components/views/` supprimé ou ne contient plus que des tests déplacés
+- [ ] `cockpit/page.tsx`, `subjects/page.tsx`, `simulation/page.tsx` sont les orchestrateurs directs
+- [ ] Tests + build verts
+- [ ] Smoke cockpit/subjects/simulation validé
+- [ ] Tag `phase-6-done` posé
 
 ---
 
@@ -485,3 +511,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-25 | Claude (session reprise, semi-autonome souple) | **Phase 3 clôturée**. Smoke test Lot R validé par le user. Deux fixes posés en clôture : (1) `6c033e5 fix(session): drop cours task in plafond/intensif mode` — bug logique métier pré-existant détecté pendant le smoke (`plafond` proposait `cours+annale L1` au lieu d'annales seules). Filtre ajouté en bout de `generateDailyTasks`, plancher/standard inchangés, 1 test mis à jour + 2 tests régression ajoutés. (2) `69666c7 fix(migration): add med-pilot-daily-session to KNOWN_KEYS` — clôture de l'attention point #3 §5c. Tests 142 → **144**, tsc/build green. Tag `phase-3-done` posé sur `69666c7`. **Phase 4 cadrée** : 4 lots S→V (voir §5d), routing Next.js App Router. Risque moyen, smoke obligatoire à T et V. |
 | 2026-04-25 | Claude (semi-autonome enchaîné) | **Phase 4 clôturée + Phase 5 démarrée**. (a) Phase 4 lots S→V codés et smoke validé : route group `(app)/`, 4 vraies routes Next, redirect `/`→`/cockpit`, middleware ajusté, providers extraits au RootLayout via `app/providers.tsx`, shell visuelle dans `(app)/layout.tsx`, suppression `LayoutShell` + `ViewContext` + `SidebarLeft`. Bonus : fix logique métier `plafond` (quotas entretien/revision passés à 3 max), bouton reset always-visible, fix timer cross-navigation (dérivé de `task.startedAt` persisté au lieu de refs locales React). Tag `phase-4-done` sur `2ce3d73`. (b) Phase 5 lots W (foundation `entities/planning/{types,model}` + 35 tests), X (hooks façade), Y (extract `EventModal`+`GridBlock`+`styles` vers `features/planning-grid/`, PlanningView passe de 1424 → 1020 lignes). Tests 144 → **181**, tsc/build green. **Stop ici en attente du smoke léger Phase 5** (vérifier route `/planning` post-Lot Y) avant Lot Z (extraction des 3 view modes — risque +). |
 | 2026-04-25 | Codex | Reprise après limite d'usage Claude. Audit réel : HEAD `fe9f48c`, Lot Z déjà commit, worktree laissé au début du Lot AA (`planning/page.tsx`, `PlanningContext.tsx`, `RecurrentSlotDialog.tsx` modifiés). Les deux anciens findings P1 sur `entities/session/store.ts` sont bien corrigés. Step 5.7 commit `652b928` : `/planning` devient l'orchestrateur direct des features. Step 5.8 codé : suppression de `src/components/views/PlanningView.tsx` et `src/types/planning.ts`, derniers imports planning repointés vers `entities/planning`. `npm test` 13 fichiers / 181 tests OK, `npm run build` OK. **Stop requis pour smoke vital Phase 5** avant tag `phase-5-done`. |
+| 2026-04-25 | Codex | Smoke vital Phase 5 validé par le user. Tag `phase-5-done` posé sur `b7773c3`. Handoff mis à jour pour cadrer la Phase 6 : Lot AB (`HomeView` widgets), Lot AC (`cockpit/page.tsx` final + suppression HomeView), Lot AD (subject-list), Lot AE (`SubjectsView`/`SimulationView` supprimés + tag Phase 6). |
