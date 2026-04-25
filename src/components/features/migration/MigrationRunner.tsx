@@ -3,8 +3,9 @@
 /**
  * MigrationRunner — Composant invisible qui orchestre la migration
  *
- * À placer dans LayoutShell, après le login.
- * Affiche une petite notification de progression, puis disparaît.
+ * Monté dans `src/app/(app)/layout.tsx` (route group `(app)`), après
+ * que le middleware Supabase a confirmé l'auth. Affiche une petite
+ * notification de progression, puis disparaît.
  */
 
 import { useEffect, useState } from "react";
