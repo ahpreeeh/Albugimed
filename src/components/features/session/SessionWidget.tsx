@@ -17,10 +17,11 @@ import {
 } from '@/entities/session/hooks';
 import { StrategyModal } from './StrategyModal';
 import { DayLoadSelector } from '@/features/session-widget/DayLoadSelector';
+import { DifficultySelector } from '@/features/session-widget/DifficultySelector';
 import { useSessionTimingStorage } from '@/hooks/useSessionTimingStorage';
 import type { DayLoad } from '@/entities/strategy/types';
 import type { DifficultyRating } from '@/entities/session/types';
-import { reasonLabel, taskTypeLabel, reasonBadgeClass, difficultyColor } from '@/entities/session/types';
+import { reasonLabel, taskTypeLabel, reasonBadgeClass } from '@/entities/session/types';
 import { cn } from '@/shared/lib/cn';
 import { toLocalISOString } from '@/shared/lib/dates';
 
@@ -88,34 +89,6 @@ function formatTime(ms: number): string {
     const sec = totalSec % 60;
     return `${min}m ${String(sec).padStart(2, '0')}s`;
 }
-
-// ─── Difficulty Rating Selector ──────────────────────────────────────
-const DifficultySelector = ({ onRate }: { onRate: (r: DifficultyRating) => void }) => {
-    const ratings: { value: DifficultyRating; label: string }[] = [
-        { value: 'blue', label: 'Facile' },
-        { value: 'green', label: 'OK' },
-        { value: 'orange', label: 'Difficile' },
-        { value: 'red', label: 'Très dur' },
-    ];
-
-    return (
-        <div className="space-y-2">
-            <p className="text-[10px] font-medium text-[var(--color-text-muted)]">
-                Comment avez-vous trouvé ?
-            </p>
-            <div className="flex gap-1.5">
-                {ratings.map(r => (
-                    <button key={r.value}
-                        onClick={() => onRate(r.value)}
-                        className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold text-white transition-all hover:scale-105"
-                        style={{ backgroundColor: difficultyColor(r.value) }}>
-                        {r.label}
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-};
 
 // ─── Main Widget ─────────────────────────────────────────────────────
 export const SessionWidget = () => {
