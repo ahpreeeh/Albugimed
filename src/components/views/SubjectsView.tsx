@@ -3,9 +3,9 @@
 import React, { useState, useMemo } from "react";
 import { BookOpen, Plus, Filter, ChevronDown, ChevronRight, FolderOpen } from "lucide-react";
 import { useSubjects, Subject } from "@/entities/subject/hooks";
-import { SubjectCard } from "@/components/features/subjects/SubjectCard";
-import { AddSubjectModal } from "@/components/features/subjects/AddSubjectModal";
-import { SubjectDetailModal } from "@/components/features/subjects/SubjectDetailModal";
+import { SubjectCard } from "@/features/subject-list/SubjectCard";
+import { AddSubjectModal } from "@/features/subject-list/AddSubjectModal";
+import { SubjectDetailModal } from "@/features/subject-list/SubjectDetailModal";
 import { cn } from "@/shared/lib/cn";
 
 type FilterMode = "all" | "not-started" | "in-progress" | "exam-soon";
