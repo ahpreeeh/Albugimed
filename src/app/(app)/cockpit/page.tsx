@@ -14,7 +14,7 @@ import type { AgendaEvent } from "@/context/EventContext";
 
 import { cn } from "@/shared/lib/cn";
 import type { ActiveStrategy } from "@/entities/strategy/types";
-import { SessionWidget } from "@/components/features/session/SessionWidget";
+import { SessionWidget } from "@/features/session-widget/SessionWidget";
 import { StatsBar } from "@/features/home-widgets/StatsBar";
 import { EdnCountdown } from "@/features/home-widgets/EdnCountdown";
 import { TasksNotes } from "@/features/home-widgets/TasksNotes";

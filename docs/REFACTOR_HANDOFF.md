@@ -406,7 +406,7 @@ Phase 7 = découpe des gros composants features restants. Les lots qui touchent 
 | Lot | Étapes | Ce qu'il contient | Risque | Smoke |
 |---|---|---|---|---|
 | **AF** | 7.1 → 7.3 ✅ | Extraire `DayLoadSelector`, `DifficultySelector`, `SessionTimer` depuis `SessionWidget.tsx` vers `features/session-widget/`. `DayLoadSelector`, `DifficultySelector`, `SessionTimer` extraits, tests/build OK. | faible | session smoke accumulé |
-| **AG** | 7.4 | Déplacer `SessionWidget` vers `features/session-widget/` et mettre à jour les imports. | moyen | session complet |
+| **AG** | 7.4 ✅ code OK | Déplacer `SessionWidget` vers `features/session-widget/` et mettre à jour les imports. `npm test` + `npm run build` OK. | moyen | session complet accumulé |
 | **AH** | 7.5 | Extraire `StrategyModal` vers `features/strategy-picker/`. | moyen | stratégie |
 | **AI** | 7.6 | Créer `entities/simulation/{types,gemini,model,api}.ts` + tests purs. | moyen | non si dormant |
 | **AJ** | 7.7 | Migrer `SimulatorChat` vers `features/simulator-chat/` et brancher `entities/simulation`. | élevé | chat + capture erreur requis |

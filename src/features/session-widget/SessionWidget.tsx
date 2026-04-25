@@ -15,10 +15,10 @@ import {
     useSessionActions,
     useTotalElapsed,
 } from '@/entities/session/hooks';
-import { StrategyModal } from './StrategyModal';
-import { DayLoadSelector } from '@/features/session-widget/DayLoadSelector';
-import { DifficultySelector } from '@/features/session-widget/DifficultySelector';
-import { SessionTimer, formatTime, useSessionTimer } from '@/features/session-widget/SessionTimer';
+import { StrategyModal } from '@/components/features/session/StrategyModal';
+import { DayLoadSelector } from './DayLoadSelector';
+import { DifficultySelector } from './DifficultySelector';
+import { SessionTimer, formatTime, useSessionTimer } from './SessionTimer';
 import { useSessionTimingStorage } from '@/hooks/useSessionTimingStorage';
 import type { DayLoad } from '@/entities/strategy/types';
 import type { DifficultyRating } from '@/entities/session/types';
