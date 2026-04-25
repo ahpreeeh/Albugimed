@@ -48,7 +48,7 @@ vi.mock('lucide-react', async (importOriginal) => {
 });
 
 // ── Import AFTER mocks ───────────────────────────────────────────────
-import { TasksNotes, deriveTitle, formatNoteDate, type QuickNote } from '../HomeView';
+import { TasksNotes, deriveTitle, formatNoteDate, type QuickNote } from '@/features/home-widgets/TasksNotes';
 
 // ─── Pure function tests ─────────────────────────────────────────────
 
