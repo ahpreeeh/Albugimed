@@ -193,7 +193,7 @@ Phase 6 cible les trois vues restantes encore dans `src/components/views/` : `Ho
 
 | Lot | Steps | Statut | Effet attendu |
 |---|---|---|---|
-| AB | 6.1 → 6.4 | ⏳ | Extraire depuis `HomeView.tsx` : `StatsBar`, `EdnCountdown`, `TasksNotes`, `RecentErrors` vers `features/home-widgets/`. Risque faible, composants déjà isolés dans le fichier. |
+| AB | 6.1 → 6.4 | ⏳ 6.1 codé | Extraire depuis `HomeView.tsx` : `StatsBar`, `EdnCountdown`, `TasksNotes`, `RecentErrors` vers `features/home-widgets/`. `StatsBar` est déjà extrait. |
 | AC | 6.5 | ⏳ | Remplacer `cockpit/page.tsx` par l'assemblage direct des widgets, puis supprimer `HomeView.tsx`. Risque moyen, smoke cockpit requis. |
 | AD | 6.6 | ⏳ | Déplacer les composants subject vers `features/subject-list/`. Risque faible. |
 | AE | 6.7 | ⏳ | Remplacer `SubjectsView` et `SimulationView` par leurs pages, puis supprimer les vues. Risque moyen, smoke final Phase 6 requis + tag `phase-6-done`. |
@@ -385,7 +385,7 @@ Phase 6 = suppression progressive des vues restantes dans `src/components/views/
 
 ### Critères de succès Phase 6
 
-- [ ] `features/home-widgets/` contient les widgets cockpit extraits
+- [ ] `features/home-widgets/` contient les widgets cockpit extraits (`StatsBar` fait)
 - [ ] `src/components/views/HomeView.tsx` supprimé
 - [ ] `features/subject-list/` contient les composants subject
 - [ ] `src/components/views/{SubjectsView,SimulationView}.tsx` supprimés
