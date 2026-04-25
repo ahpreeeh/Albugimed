@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useCloudValue } from "@/shared/hooks/useCloudValue";
 import {
     LayoutGrid, Clock, BookOpen, AlertCircle,
@@ -12,7 +13,6 @@ import { useSubjects } from "@/entities/subject/hooks";
 import type { Subject } from "@/entities/subject/hooks";
 import { useEvents } from "@/context/EventContext";
 import type { AgendaEvent } from "@/context/EventContext";
-import { useView } from "@/context/ViewContext";
 
 import { cn } from "@/shared/lib/cn";
 import type { ErrorEntry } from "@/types";
@@ -113,7 +113,7 @@ const StatsBar = () => {
 
 // ——— Recent Errors ———
 const RecentErrors = () => {
-    const { setActiveView } = useView();
+    const router = useRouter();
     const [errors, setErrors] = useState<ErrorEntry[]>([]);
 
     useEffect(() => {
@@ -132,7 +132,7 @@ const RecentErrors = () => {
                     <AlertCircle className="h-3.5 w-3.5 text-red-400" />
                     <span className="text-xs font-semibold text-[var(--color-text-primary)]">Dernières erreurs</span>
                 </div>
-                <button onClick={() => setActiveView('simulation')}
+                <button onClick={() => router.push('/simulation')}
                     className="text-[9px] text-[var(--color-accent)] hover:underline font-medium flex items-center gap-0.5">
                     Voir tout <ChevronRight className="h-2.5 w-2.5" />
                 </button>
@@ -437,18 +437,18 @@ export const TasksNotes = () => {
 
 // ——— Quick Actions ———
 const QuickActions = () => {
-    const { setActiveView } = useView();
+    const router = useRouter();
 
     const actions = [
-        { label: 'Lancer un DP', icon: GraduationCap, view: 'simulation' as const },
-        { label: 'Agenda', icon: Calendar, view: 'planning' as const },
-        { label: 'Matières', icon: BookOpen, view: 'subjects' as const },
+        { label: 'Lancer un DP', icon: GraduationCap, href: '/simulation' },
+        { label: 'Agenda', icon: Calendar, href: '/planning' },
+        { label: 'Matières', icon: BookOpen, href: '/subjects' },
     ];
 
     return (
         <div className="flex gap-2">
             {actions.map(a => (
-                <button key={a.label} onClick={() => setActiveView(a.view)}
+                <button key={a.label} onClick={() => router.push(a.href)}
                     className="app-card flex-1 p-3 flex flex-col items-center gap-1.5 hover:border-[var(--color-accent)] transition-all cursor-pointer group">
                     <a.icon className="h-4 w-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-accent)] transition-colors" />
                     <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{a.label}</span>
@@ -649,7 +649,7 @@ const InlineAlertBanner = () => {
 
 // ——— Upcoming Deadlines Widget ———
 const UpcomingDeadlines = () => {
-    const { setActiveView } = useView();
+    const router = useRouter();
     const items = useUpcomingDeadlines(60);
     const top5 = items.slice(0, 5);
 
@@ -666,7 +666,7 @@ const UpcomingDeadlines = () => {
                     <span className="text-xs font-semibold text-[var(--color-text-primary)]">Prochaines échéances</span>
                 </div>
                 <button
-                    onClick={() => setActiveView('planning')}
+                    onClick={() => router.push('/planning')}
                     className="text-[9px] text-[var(--color-accent)] hover:underline font-medium flex items-center gap-0.5"
                 >
                     Agenda <ChevronRight className="h-2.5 w-2.5" />
