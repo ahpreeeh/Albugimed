@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { RecurrentSlot, PlanningEventType, RecurrentSlotUtils } from "@/types/planning";
+import { RecurrentSlot, PlanningEventType, RecurrentSlotUtils } from "@/entities/planning/types";
 import { X } from "lucide-react";
 
 interface RecurrentSlotDialogProps {

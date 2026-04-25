@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { RecurrentSlot, PlanningEvent, Deadline, RecurrentSlotUtils } from "@/types/planning";
+import { RecurrentSlot, PlanningEvent, Deadline, RecurrentSlotUtils } from "@/entities/planning/types";
 import { useCloudValue } from "@/shared/hooks/useCloudValue";
 
 // ─── Storage Keys ─────────────────────────────────────────────────────

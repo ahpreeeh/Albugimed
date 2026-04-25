@@ -4,9 +4,8 @@
 // testable. Les fonctions qui utilisent `Date.now()` ou `new Date()`
 // acceptent un timestamp injectable pour le déterminisme des tests.
 //
-// Dormant en step 5.2 : ce module est exporté mais PlanningView garde
-// encore ses copies inline. La migration des consommateurs viendra avec
-// l'extraction des sous-composants en Phase 5 Lots Y → AA.
+// Depuis les Lots Y → AA, les features Planning consomment directement ces
+// helpers au lieu de copies inline dans l'ancienne PlanningView.
 
 import * as chrono from 'chrono-node';
 import type { GridItem } from './types';

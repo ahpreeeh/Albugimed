@@ -17,7 +17,7 @@
 import type { ReactNode } from "react";
 import { SubjectProvider } from "@/entities/subject/hooks";
 import { EventProvider } from "@/context/EventContext";
-import { PlanningProvider } from "@/context/PlanningContext";
+import { PlanningProvider } from "@/entities/planning/hooks";
 import { StrategyProvider } from "@/entities/strategy/hooks";
 
 interface AppProvidersProps {

@@ -13,8 +13,7 @@
 // entities/session/ et entities/subject/ qui avaient des accès Supabase
 // hand-rolled dans leur context (= duplication réelle à éliminer).
 //
-// Migration : les ~20 consommateurs `@/context/PlanningContext` seront
-// migrés vers cette façade dans les Lots Y → AA quand on cassera
-// PlanningView en sous-composants.
+// Les consommateurs React passent par cette façade ; seul ce fichier connaît
+// encore le chemin d'implémentation historique du context.
 
 export { usePlanning, PlanningProvider } from '@/context/PlanningContext';
