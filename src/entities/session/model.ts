@@ -228,9 +228,13 @@ export function generateDailyTasks(
             revisionQuota = 1;
             break;
         case 'plafond':
+            // Intensif : jusqu'à 3 chapitres dans chaque catégorie pour
+            // que le programme soit vraiment chargé quand le pool est dense.
+            // Si une catégorie est vide, son quota tombe à 0 (pas de tâche
+            // fantôme) — la fallback finale prend le relais si tout est vide.
             newQuota = Math.min(3, nouveaux.length || 1);
-            entretienQuota = 1;
-            revisionQuota = 1;
+            entretienQuota = Math.min(3, entretiens.length);
+            revisionQuota = Math.min(3, revisions.length);
             break;
     }
 

@@ -420,6 +420,55 @@ describe('generateDailyTasks', () => {
         expect(tasks.filter(t => t.taskType === 'cours')).toHaveLength(0);
     });
 
+    it('plafond : scale entretien et revision jusqu\'à 3 chacun quand le pool est riche', () => {
+        resetIdCounter();
+        // Pool dense : 0 nouveau, 4 entretiens, 4 revisions
+        const subject = makeSubject('s1', [
+            makeChapter('e1', { courseStarted: true }),
+            makeChapter('e2', { courseStarted: true }),
+            makeChapter('e3', { courseStarted: true }),
+            makeChapter('e4', { courseStarted: true }),
+            makeChapter('r1', {
+                courseStarted: true, level1Done: true, reactivationDone: true, advancedDone: true,
+            }),
+            makeChapter('r2', {
+                courseStarted: true, level1Done: true, reactivationDone: true, advancedDone: true,
+            }),
+            makeChapter('r3', {
+                courseStarted: true, level1Done: true, reactivationDone: true, advancedDone: true,
+            }),
+            makeChapter('r4', {
+                courseStarted: true, level1Done: true, reactivationDone: true, advancedDone: true,
+            }),
+        ]);
+        const strategy = makeStrategy({ preparationSubjectIds: ['s1'] });
+
+        const tasks = generateDailyTasks(strategy, [subject], 'plafond', {
+            now: FIXED_NOW, makeId: deterministicMakeId,
+        });
+        // 0 nouveaux + 3 entretiens (capés) + 3 revisions (capés) = 6 tâches
+        expect(tasks).toHaveLength(6);
+        expect(tasks.filter(t => t.reason === 'entretien')).toHaveLength(3);
+        expect(tasks.filter(t => t.reason === 'revision')).toHaveLength(3);
+    });
+
+    it('plafond : 1 seul chapitre entretien dispo → 1 seule tâche (pas de fabrication artificielle)', () => {
+        // Régression du symptôme "1/1 tâche du jour" : si l'utilisateur n'a
+        // qu'un seul chapitre actionnable, plafond ne peut pas inventer du
+        // travail — le fix de quotas n'invente pas de chapitres absents.
+        resetIdCounter();
+        const subject = makeSubject('s1', [
+            makeChapter('only', { courseStarted: true }), // un seul entretien
+        ]);
+        const strategy = makeStrategy({ preparationSubjectIds: ['s1'] });
+
+        const tasks = generateDailyTasks(strategy, [subject], 'plafond', {
+            now: FIXED_NOW, makeId: deterministicMakeId,
+        });
+        expect(tasks).toHaveLength(1);
+        expect(tasks[0].reason).toBe('entretien');
+    });
+
     it('plafond : aucune tâche `cours` même quand un chapitre `nouveau` est ciblé', () => {
         resetIdCounter();
         const subject = makeSubject('s1', [makeChapter('n1')]); // un seul nouveau, rien d'autre
