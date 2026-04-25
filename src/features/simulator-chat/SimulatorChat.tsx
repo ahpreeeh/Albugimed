@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, RefreshCw, Bot, User, AlertTriangle, Settings, Maximize2, Minimize2, Lock } from 'lucide-react';
+import { Send, RefreshCw, Bot, AlertTriangle, Settings, Maximize2, Minimize2, Lock } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
-import ReactMarkdown from 'react-markdown';
 import type { ChatMessage, ErrorEntry } from '@/entities/simulation/types';
 import { validateChatMessages, validateErrorBank } from '@/shared/lib/validators';
 import { useGeminiConfig } from '@/hooks/useGeminiConfig';
 import { loadChatHistory, saveChatHistory, saveErrorBank } from '@/entities/simulation/api';
 import { askGemini, buildGeminiHistory } from '@/entities/simulation/gemini';
 import { extractErrorCapture } from '@/entities/simulation/model';
+import { ChatMessageBubble } from './ChatMessageBubble';
 
 const WELCOME_MSG = "Bonjour Docteur. Quel dossier voulez-vous traiter aujourd'hui (Matière) et à quel niveau de difficulté (0 à 4) ?";
 const INACTIVITY_THRESHOLD = 2 * 60 * 60 * 1000;
@@ -272,41 +272,7 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
             )}>
                 <div className={cn("mx-auto", isFullScreen ? "max-w-4xl" : "max-w-3xl")}>
                     {messages.map(msg => (
-                        <div key={msg.id} className={cn(
-                            "flex gap-3 mb-5",
-                            msg.role === 'user' ? "ml-auto flex-row-reverse max-w-[85%]" : "max-w-full"
-                        )}>
-                            <div className={cn(
-                                "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
-                                msg.role === 'user' ? "border-[var(--color-accent-border)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]" :
-                                msg.role === 'system' ? "border-amber-400/30 bg-amber-400/10 text-amber-400" :
-                                "border-[var(--color-border-default)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
-                            )}>
-                                {msg.role === 'user' ? <User className="w-3.5 h-3.5" /> :
-                                 msg.role === 'system' ? <AlertTriangle className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
-                            </div>
-                            <div className={cn(
-                                "rounded-2xl border px-4 py-3 text-sm leading-relaxed",
-                                msg.role === 'user'
-                                    ? "rounded-tr-md border-[var(--color-accent-border)] bg-[var(--color-accent-soft)] text-[var(--color-text-primary)]"
-                                    : msg.role === 'system'
-                                    ? "border-amber-400/30 bg-amber-400/10"
-                                    : "rounded-tl-md border-[var(--color-border-default)] bg-[var(--color-bg-card)] text-[var(--color-text-primary)]"
-                            )}>
-                                {msg.role === 'model' ? (
-                                    <ReactMarkdown components={{
-                                        strong: ({ ...props }) => <span className="font-semibold text-[var(--color-accent)]" {...props} />,
-                                        ul: ({ ...props }) => <ul className="list-disc list-inside my-2 space-y-1" {...props} />,
-                                        ol: ({ ...props }) => <ol className="list-decimal list-inside my-2 space-y-1" {...props} />,
-                                        p: ({ ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-                                        h2: ({ ...props }) => <h2 className="text-base font-bold mt-4 mb-2 text-[var(--color-text-primary)]" {...props} />,
-                                        h3: ({ ...props }) => <h3 className="text-sm font-bold mt-3 mb-1.5 text-[var(--color-text-primary)]" {...props} />,
-                                    }}>
-                                        {msg.text}
-                                    </ReactMarkdown>
-                                ) : <span className="text-[var(--color-text-primary)]">{msg.text}</span>}
-                            </div>
-                        </div>
+                        <ChatMessageBubble key={msg.id} message={msg} />
                     ))}
                     {isLoading && (
                         <div className="flex gap-3 mb-5">
