@@ -6,7 +6,7 @@ import { useCloudValue } from "@/shared/hooks/useCloudValue";
 import {
     LayoutGrid, Clock, BookOpen, AlertCircle,
     ChevronRight, GraduationCap, Calendar,
-    Target, Plus, CheckSquare, FileText, Trash2, X,
+    Plus, CheckSquare, FileText, Trash2, X,
     Save, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useSubjects } from "@/entities/subject/hooks";
@@ -19,49 +19,9 @@ import type { ErrorEntry } from "@/types";
 import type { ActiveStrategy } from "@/entities/strategy/types";
 import { SessionWidget } from "@/components/features/session/SessionWidget";
 import { StatsBar } from "@/features/home-widgets/StatsBar";
+import { EdnCountdown } from "@/features/home-widgets/EdnCountdown";
 
 import { WeeklyTracker } from "@/components/features/tracking/WeeklyTracker";
-
-// ——— EDN Countdown ———
-const EDN_DATE_KEY = 'med-pilot-edn-date';
-
-const EdnCountdown = () => {
-    const { data: ednDate, save: saveCloud } = useCloudValue<string>(EDN_DATE_KEY, '');
-    const [editing, setEditing] = useState(false);
-
-    const save = (val: string) => {
-        saveCloud(val);
-        setEditing(false);
-    };
-
-    if (!ednDate && !editing) {
-        return (
-            <button onClick={() => setEditing(true)}
-                className="text-[10px] text-[var(--color-accent)] hover:underline font-medium">
-                + Configurer date EDN
-            </button>
-        );
-    }
-
-    if (editing) {
-        return (
-            <input type="date" value={ednDate} onChange={e => save(e.target.value)}
-                onBlur={() => setEditing(false)} autoFocus
-                className="app-input text-xs py-0.5 px-2" />
-        );
-    }
-
-    const days = Math.ceil((new Date(ednDate).getTime() - Date.now()) / 86400000);
-    if (days < 0) return null;
-
-    return (
-        <button onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--color-accent)] hover:underline cursor-pointer">
-            <Target className="h-3 w-3" />
-            J-{days} EDN
-        </button>
-    );
-};
 
 // ——— Recent Errors ———
 const RecentErrors = () => {
