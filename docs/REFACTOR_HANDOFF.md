@@ -2,8 +2,8 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-25 (Phase 4 clôturée + Phase 5 Lots W/X/Y faits — extraction PlanningView en cours)
-**Mise à jour par** : Claude (session enchaînement semi-autonome)
+**Dernière mise à jour** : 2026-04-25 (Phase 5 Lot AA en cours — page `/planning` devenue orchestrateur direct)
+**Mise à jour par** : Codex (audit reprise + finalisation semi-autonome)
 
 ---
 
@@ -18,7 +18,7 @@
 | Tag fin Phase 2 | `phase-2-done` sur `94b83d3` |
 | Tag fin Phase 3 | `phase-3-done` sur `69666c7` |
 | Tag fin Phase 4 | `phase-4-done` sur `2ce3d73` |
-| HEAD de la branche refactor | `2123d5c` — `refactor(phase-5): step 5.4 — extract EventModal + GridBlock` |
+| HEAD de la branche refactor | Phase 5 Lot AA en cours — confirmer avec `git log --oneline -10` |
 | Remote push | **non pushé** — tout est local |
 | Tests | 13 fichiers / **181 tests** / 0 échec |
 | Build Next.js | ✅ OK (10 routes statiques) |
@@ -26,7 +26,7 @@
 | Smoke test Phase 2 Lot H + K | ✅ validés 2026-04-20 |
 | Smoke test Phase 3 Lot Q + R | ✅ validés (Q: 2026-04-20, R: 2026-04-25) |
 | Smoke test Phase 4 Lot T + U + V | ✅ validés 2026-04-25 (routes + nav + timer cross-route) |
-| Smoke test Phase 5 | ⏳ **dette accumulée** : Lots W/X (additif sûr) + Lot Y (modifie imports PlanningView, JSX inchangée). À valider avant Lot Z (extraction des view modes — risque plus élevé). |
+| Smoke test Phase 5 | ⏳ **requis après Lot AA** : la route `/planning` est maintenant branchée directement sur les features Planning. |
 
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
@@ -190,12 +190,12 @@ Phase 5 partiellement avancée :
 | W | 5.1 + 5.2 | ✅ `e6f1e44` | `entities/planning/{types,model}.ts` + 35 tests unitaires (parseNLPInput, layoutOverlaps, time helpers, etc.). `src/types/planning.ts` reste en BC shim. |
 | X | 5.3 | ✅ `e8f5971` | `entities/planning/hooks.ts` façade (re-export PlanningContext). Pas d'`api.ts` car PlanningContext déjà sur `useCloudValue`. |
 | Y | 5.4 | ✅ `2123d5c` | Extraction `EventModal` + `GridBlock` + `styles.ts` vers `features/planning-grid/`. PlanningView.tsx passe de 1424 → 1020 lignes (-404). Imports migrés vers `@/entities/planning/{types,model}` et `@/features/planning-grid/*`. JSX inchangée. |
-| Z | 5.5 + 5.6 | ⏳ | Casser les 3 view modes : `features/planning-calendar/MonthlyCalendar`, `features/planning-recurrent/RecurrentSlotsList`, `features/planning-grid/PlanningGrid` (week view + drag-drop + NLPQuickAdd). Risque moyen. |
-| AA | 5.7 + 5.8 | ⏳ | Orchestrateur `app/(app)/planning/page.tsx` (~80 lig) + suppression de `src/components/views/PlanningView.tsx` + `src/types/planning.ts` (BC shim). Migrer les ~20 imports `@/context/PlanningContext` → `@/entities/planning/hooks`. **Smoke vital**. Tag `phase-5-done`. |
+| Z | 5.5 + 5.6 | ✅ `fe9f48c` | Les 3 view modes sont extraits : `features/planning-calendar/MonthlyCalendar`, `features/planning-recurrent/RecurrentSlotsList`, `features/planning-grid/PlanningGrid`. `PlanningView.tsx` est devenu un orchestrateur fin. |
+| AA | 5.7 + 5.8 | ⏳ 5.7 en cours | `app/(app)/planning/page.tsx` devient l'orchestrateur direct. Reste à supprimer `src/components/views/PlanningView.tsx` + `src/types/planning.ts` (BC shim) et à finaliser les imports. **Smoke vital** ensuite. |
 
-### Smoke test Phase 5 à faire avant Lot Z
+### Smoke test Phase 5 à faire après Lot AA
 
-Risque : Lot Y a modifié les imports de PlanningView mais pas la JSX. La route `/planning` doit fonctionner exactement comme avant. Test rapide :
+Risque : Lot Z a extrait les 3 modes et Lot AA branche `/planning` directement sur ces features. La route `/planning` doit fonctionner exactement comme avant. Test rapide :
 
 1. Login → naviguer vers `/planning`
 2. Mode "Semaine" : la grille s'affiche, les événements de la semaine apparaissent à leur emplacement, drag-and-drop d'un événement vers un autre créneau marche
@@ -204,16 +204,15 @@ Risque : Lot Y a modifié les imports de PlanningView mais pas la JSX. La route 
 5. Mode "Récurrents" : liste des slots récurrents, créer/éditer/désactiver un slot
 6. Quick-add NLP en haut : taper "Révision cardio demain 14h" → un événement se crée
 
-Si tout marche → enchaîner Lot Z autonomement (pas de smoke intermédiaire car juste de l'extraction de composants déjà testés). Si quelque chose flicker → diagnostic ciblé sur l'import incriminé.
+Si tout marche → tag `phase-5-done`, puis passer à la Phase 6. Si quelque chose flicker → diagnostic ciblé sur le mode Planning concerné.
 
 ### État pré-suite
 
 - `src/types/session.ts` : supprimé au step 3.8 (commit `416fcc6`).
 - `src/types/strategy.ts` : supprimé au step 2.10 (commit `94b83d3`).
-- `src/types/planning.ts` : encore en place comme BC shim (re-export depuis entities), à supprimer en Lot AA.
+- `src/types/planning.ts` : encore en place comme BC shim (re-export depuis entities), à supprimer avant clôture Lot AA.
 - `src/types/` ne contient plus que `index.ts` (types divers : `ChatMessage`, `ErrorEntry`, `Flashcard`, `MedPilotBackup`, `ImportResult`) et `planning.ts` (BC shim).
-- Tests : 13 fichiers / 181 verts. tsc + build clean. 10 routes statiques.
-- Tests : 144 verts, build green, tsc clean. Aucun warning à traiter.
+- Tests : 13 fichiers / 181 verts. Build Next.js clean. 10 routes statiques.
 
 ---
 
