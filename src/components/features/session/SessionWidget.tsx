@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
 import {
     Play, Square, ArrowRight, SkipForward, Settings2,
-    Clock, Zap, Target, CheckCircle2, Trophy, Pause,
+    Clock, Zap, Target, CheckCircle2, Trophy, Pause, RotateCcw,
 } from 'lucide-react';
 import { useStrategy } from '@/entities/strategy/hooks';
 import { useSubjects } from '@/entities/subject/hooks';
@@ -302,10 +302,18 @@ export const SessionWidget = () => {
                             {session!.dayLoad === 'plancher' ? 'Léger' : session!.dayLoad === 'standard' ? 'Standard' : 'Intensif'}
                         </span>
                     </div>
-                    <button onClick={() => setStrategieOpen(true)}
-                        className="text-[var(--color-text-hint)] hover:text-[var(--color-text-primary)] p-1 rounded-lg transition-colors">
-                        <Settings2 className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button onClick={handleResetTodaySession}
+                            className="text-[var(--color-text-hint)] hover:text-[var(--color-text-primary)] p-1 rounded-lg transition-colors"
+                            title="Régénérer la session du jour">
+                            <RotateCcw className="h-3.5 w-3.5" />
+                        </button>
+                        <button onClick={() => setStrategieOpen(true)}
+                            className="text-[var(--color-text-hint)] hover:text-[var(--color-text-primary)] p-1 rounded-lg transition-colors"
+                            title="Configurer la stratégie">
+                            <Settings2 className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Progress bar */}
