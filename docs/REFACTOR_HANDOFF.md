@@ -185,11 +185,11 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochaine action à exécuter — **Phase 6 Lot AB**
+## 4. Prochaine action à exécuter — **Phase 7 Lot AF**
 
 Phase 5 **clôturée** le 2026-04-25 (tag `phase-5-done` sur `b7773c3`). Smoke vital validé : `/planning` fonctionne après suppression de `PlanningView.tsx` et du shim `src/types/planning.ts`.
 
-Phase 6 cible les trois vues restantes encore dans `src/components/views/` : `HomeView`, `SubjectsView`, `SimulationView`.
+Phase 6 est **code OK** : les trois vues restantes (`HomeView`, `SubjectsView`, `SimulationView`) sont supprimées ou inlinées dans leurs routes. Le tag `phase-6-done` reste en attente du smoke cockpit/subjects/simulation.
 
 | Lot | Steps | Statut | Effet attendu |
 |---|---|---|---|
@@ -198,9 +198,11 @@ Phase 6 cible les trois vues restantes encore dans `src/components/views/` : `Ho
 | AD | 6.6 | ✅ code OK | `SubjectCard`, `AddSubjectModal`, `SubjectDetailModal` déplacés vers `features/subject-list/`. `npm test` + `npm run build` OK. |
 | AE | 6.7 | ⚠️ code OK, smoke phase accumulé | `subjects/page.tsx` et `simulation/page.tsx` portent directement leur JSX. `SubjectsView.tsx`, `SimulationView.tsx` et le test orphelin sous `components/views` ont été supprimés/déplacés. `npm test` + `npm run build` OK. |
 
+Prochain lot autorisé en semi-autonome : **Phase 7 Lot AF** (`7.1 → 7.3`) — extractions faibles et locales dans `SessionWidget`, sans changement de persistance ni format de données.
+
 ### Smoke Phase 6 à accumuler puis valider
 
-À faire au plus tard après AC, ou plus tôt si une régression visible apparaît :
+À faire avant de poser `phase-6-done`, ou plus tôt si une régression visible apparaît :
 
 1. `/cockpit` charge sans crash
 2. Stats matières inchangées
@@ -397,6 +399,25 @@ Phase 6 = suppression progressive des vues restantes dans `src/components/views/
 
 ---
 
+## 5g. Plan des lots pour la Phase 7
+
+Phase 7 = découpe des gros composants features restants. Les lots qui touchent la simulation/persistance restent à traiter avec prudence.
+
+| Lot | Étapes | Ce qu'il contient | Risque | Smoke |
+|---|---|---|---|---|
+| **AF** | 7.1 → 7.3 | Extraire `DayLoadSelector`, `DifficultySelector`, `SessionTimer` depuis `SessionWidget.tsx` vers `features/session-widget/`. | faible | regroupable |
+| **AG** | 7.4 | Déplacer `SessionWidget` vers `features/session-widget/` et mettre à jour les imports. | moyen | session complet |
+| **AH** | 7.5 | Extraire `StrategyModal` vers `features/strategy-picker/`. | moyen | stratégie |
+| **AI** | 7.6 | Créer `entities/simulation/{types,gemini,model,api}.ts` + tests purs. | moyen | non si dormant |
+| **AJ** | 7.7 | Migrer `SimulatorChat` vers `features/simulator-chat/` et brancher `entities/simulation`. | élevé | chat + capture erreur requis |
+| **AK** | 7.8 | Extraire le sous-composant message chat si présent. | faible | regroupable |
+| **AL** | 7.9 | Déplacer `ErrorPanel` vers `features/error-panel/` et utiliser `entities/simulation/api`. | faible à moyen | cahier d'erreurs |
+| **AM** | 7.10 | Déplacer/externaliser `AnkiExport` vers le module simulation final. | faible à moyen | export TSV |
+
+**Ordre strict** : AF → AG → AH → AI → AJ → AK → AL → AM.
+
+---
+
 ## 6. Règles d'engagement (strictes)
 
 1. **1 commit par étape atomique.** Jamais de fusion de plusieurs étapes dans un commit.
@@ -512,3 +533,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-25 | Claude (semi-autonome enchaîné) | **Phase 4 clôturée + Phase 5 démarrée**. (a) Phase 4 lots S→V codés et smoke validé : route group `(app)/`, 4 vraies routes Next, redirect `/`→`/cockpit`, middleware ajusté, providers extraits au RootLayout via `app/providers.tsx`, shell visuelle dans `(app)/layout.tsx`, suppression `LayoutShell` + `ViewContext` + `SidebarLeft`. Bonus : fix logique métier `plafond` (quotas entretien/revision passés à 3 max), bouton reset always-visible, fix timer cross-navigation (dérivé de `task.startedAt` persisté au lieu de refs locales React). Tag `phase-4-done` sur `2ce3d73`. (b) Phase 5 lots W (foundation `entities/planning/{types,model}` + 35 tests), X (hooks façade), Y (extract `EventModal`+`GridBlock`+`styles` vers `features/planning-grid/`, PlanningView passe de 1424 → 1020 lignes). Tests 144 → **181**, tsc/build green. **Stop ici en attente du smoke léger Phase 5** (vérifier route `/planning` post-Lot Y) avant Lot Z (extraction des 3 view modes — risque +). |
 | 2026-04-25 | Codex | Reprise après limite d'usage Claude. Audit réel : HEAD `fe9f48c`, Lot Z déjà commit, worktree laissé au début du Lot AA (`planning/page.tsx`, `PlanningContext.tsx`, `RecurrentSlotDialog.tsx` modifiés). Les deux anciens findings P1 sur `entities/session/store.ts` sont bien corrigés. Step 5.7 commit `652b928` : `/planning` devient l'orchestrateur direct des features. Step 5.8 codé : suppression de `src/components/views/PlanningView.tsx` et `src/types/planning.ts`, derniers imports planning repointés vers `entities/planning`. `npm test` 13 fichiers / 181 tests OK, `npm run build` OK. **Stop requis pour smoke vital Phase 5** avant tag `phase-5-done`. |
 | 2026-04-25 | Codex | Smoke vital Phase 5 validé par le user. Tag `phase-5-done` posé sur `b7773c3`. Handoff mis à jour pour cadrer la Phase 6 : Lot AB (`HomeView` widgets), Lot AC (`cockpit/page.tsx` final + suppression HomeView), Lot AD (subject-list), Lot AE (`SubjectsView`/`SimulationView` supprimés + tag Phase 6). |
+| 2026-04-25 | Codex | Phase 6 code OK : lots AB→AE commités, `HomeView`, `SubjectsView`, `SimulationView` supprimés/inlinés dans les routes, composants subject déplacés vers `features/subject-list`, test `TasksNotes` déplacé vers `features/home-widgets`. Tests 181 + build OK. Smoke cockpit/subjects/simulation et tag `phase-6-done` en attente. Phase 7 cadrée en lots AF→AM. |
