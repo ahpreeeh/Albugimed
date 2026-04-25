@@ -123,5 +123,10 @@ export async function askGemini({
 
     const chat = model.startChat({ history });
     const result = await chat.sendMessage(prompt);
-    return result.response.text();
+    const response = await result.response;
+    try {
+        return response.text();
+    } catch {
+        return '';
+    }
 }

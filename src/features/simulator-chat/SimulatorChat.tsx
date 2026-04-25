@@ -2,78 +2,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, RefreshCw, Bot, User, AlertTriangle, Settings, Maximize2, Minimize2, Lock } from 'lucide-react';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { cn } from '@/shared/lib/cn';
 import ReactMarkdown from 'react-markdown';
-import type { ChatMessage, ErrorEntry } from '@/types';
+import type { ChatMessage, ErrorEntry } from '@/entities/simulation/types';
 import { validateChatMessages, validateErrorBank } from '@/shared/lib/validators';
 import { useGeminiConfig } from '@/hooks/useGeminiConfig';
-import { createClient } from '@/utils/supabase/client';
-
-// --- System Prompt — COPIE FIDÈLE ---
-const DP_SYSTEM_INSTRUCTIONS = `
-RÔLE : Tu es un expert en pédagogie médicale EDN/ECOS et en simulation de dossiers progressifs.
-MODE DE FONCTIONNEMENT (OBLIGATOIRE) :
-Séquentiel verrouillé. Ne jamais dévoiler la suite avant la réponse de l'utilisateur.
-
-Structure du DP :
-1. Introduction clinique réaliste.
-2. 3 à 6 étapes progressives.
-3. 2 à 4 questions par étape.
-4. Correction argumentée après CHAQUE étape (Réponse attendue, Justification, Gravité de l'erreur).
-5. Débrief final global.
-
-SYSTÈME DE NIVEAUX (À respecter scrupuleusement) :
-- Niveau 0 (Typique) : Clinique classique, Biologie attendue, CAT standard. Aucune ambiguïté.
-- Niveau 1 (Monothématique) : Pathologie claire, 1 différentiel crédible.
-- Niveau 2 (Transversal Modéré) : 2 systèmes impliqués, 1 donnée parasite.
-- Niveau 3 (Transversal Avancé) : Comorbidités, Médicaments interférents, Urgence.
-- Niveau 4 (EDN Réaliste) : Faux amis plausibles, Données ambiguës, Examens inutiles proposés.
-
-RÈGLES D'INTERACTION :
-- Si l'utilisateur pose une question hors-sujet : "Question notée. Nous y reviendrons après la fin du DP."
-- Si l'utilisateur demande "Complexifie", adapte le niveau immédiatement.
-
-GESTION DES ERREURS (CRUCIAL) :
-Si l'étudiant commet une erreur significative (mauvais diagnostic, mauvaise prise en charge, oubli grave), tu DOIS ajouter à la fin de ta réponse un bloc de code JSON caché, balisé strictement comme ceci :
-[CAPTURE_ERREUR]
-{
-"matiere": "Nom Exact de la matière selon la liste officielle",
-"question": "Le résumé de la question posée",
-"erreur_commise": "Le résumé de la réponse fausse de l'étudiant",
-"correction": "La réponse attendue et le point clé à retenir (court)",
-"date": "TIMESTAMP_JS"
-}
-[/CAPTURE_ERREUR]
-
-LISTE OFFICIELLE DES MATIÈRES (Utilise uniquement ces noms exacts pour le champ "matiere") :
-Cancérologie
-Cardiologie et Médecine vasculaire
-Chirurgie maxillo-faciale
-Dermatologie
-Endocrinologie, diabète, nutrition
-Gériatrie
-Gynécologie et obstétrique
-Hématologie
-Hépato-gastro-entérologie et chirurgie digestive
-Infectiologie
-Médecine interne
-Médecine physique et réadaptation
-Néphrologie
-Neurologie
-Ophtalmologie
-ORL
-Orthopédie
-Pédiatrie
-Pneumologie et allergologie
-Psychiatrie
-Rhumatologie
-Santé publique, médecine du travail, médecine légale
-Urgence, anesthésie, réanimation
-Urologie
-
-FORMAT DE SORTIE : Utilise du Markdown clair (Gras pour les mots-clés importants).
-`;
+import { loadChatHistory, saveChatHistory, saveErrorBank } from '@/entities/simulation/api';
+import { askGemini, buildGeminiHistory } from '@/entities/simulation/gemini';
+import { extractErrorCapture } from '@/entities/simulation/model';
 
 const WELCOME_MSG = "Bonjour Docteur. Quel dossier voulez-vous traiter aujourd'hui (Matière) et à quel niveau de difficulté (0 à 4) ?";
 const INACTIVITY_THRESHOLD = 2 * 60 * 60 * 1000;
@@ -92,6 +28,8 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
     const [isLoading, setIsLoading]           = useState(false);
     const [isFullScreen, setIsFullScreen]     = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const historyHydratedRef = useRef(false);
+    const historyMutationVersionRef = useRef(0);
 
     // Synchroniser les champs du formulaire config avec les valeurs cloud
     useEffect(() => {
@@ -101,25 +39,54 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
         }
     }, [configLoaded, apiKey, cloudModelId]);
 
-    // Charger l'historique du chat depuis localStorage
+    // Charger l'historique local immédiatement, puis réconcilier avec le cloud.
     useEffect(() => {
+        const fallback = [{ id: 'welcome', role: 'model' as const, text: WELCOME_MSG, timestamp: Date.now() }];
+        let cancelled = false;
+        const initialMutationVersion = historyMutationVersionRef.current;
         const storedHistory = localStorage.getItem('dp_chat_history');
         if (storedHistory) {
             try {
                 const validated = validateChatMessages(JSON.parse(storedHistory));
-                setMessages(validated.length > 0 ? validated : [{ id: 'welcome', role: 'model', text: WELCOME_MSG, timestamp: Date.now() }]);
+                setMessages(validated.length > 0 ? validated : fallback);
             } catch {
-                setMessages([{ id: 'welcome', role: 'model', text: WELCOME_MSG, timestamp: Date.now() }]);
+                setMessages(fallback);
             }
         } else {
-            setMessages([{ id: 'welcome', role: 'model', text: WELCOME_MSG, timestamp: Date.now() }]);
+            setMessages(fallback);
         }
+
+        loadChatHistory().then((cloudHistory) => {
+            if (
+                cancelled
+                || cloudHistory.length === 0
+                || historyMutationVersionRef.current !== initialMutationVersion
+            ) {
+                return;
+            }
+            setMessages(cloudHistory);
+            localStorage.setItem('dp_chat_history', JSON.stringify(cloudHistory));
+        }).catch(error => {
+            console.warn('[SimulatorChat] Chargement cloud échoué', error);
+        }).finally(() => {
+            if (!cancelled) {
+                historyHydratedRef.current = true;
+            }
+        });
+
+        return () => { cancelled = true; };
     }, []);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         if (messages.length > 0 && messages.some(m => m.role === 'user' || m.role === 'model')) {
             localStorage.setItem('dp_chat_history', JSON.stringify(messages));
+            if (!historyHydratedRef.current) {
+                return;
+            }
+            saveChatHistory(messages).catch(error => {
+                console.warn('[SimulatorChat] Sauvegarde cloud échouée', error);
+            });
         }
     }, [messages]);
 
@@ -134,6 +101,7 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
 
     const startNewSession = () => {
         if (confirm("Voulez-vous vraiment commencer une nouvelle session ? L'historique actuel sera effacé.")) {
+            historyMutationVersionRef.current += 1;
             localStorage.removeItem('dp_chat_history');
             setMessages([{
                 id: crypto.randomUUID(), role: 'model',
@@ -143,59 +111,26 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
         }
     };
 
-    // --- Error extraction — COPIE FIDÈLE ---
     const extractAndSaveErrors = useCallback((text: string): string => {
-        const regex = /\[CAPTURE_ERREUR\]([\s\S]*?)\[\/CAPTURE_ERREUR\]/g;
-        let cleanText = text;
-        let match;
-        let captured = false;
+        let existingErrors: ErrorEntry[] = [];
+        try {
+            existingErrors = validateErrorBank(JSON.parse(localStorage.getItem('med-pilot-error-bank') || '[]'));
+        } catch { /* start fresh */ }
 
-        while ((match = regex.exec(text)) !== null) {
-            try {
-                const errorData = JSON.parse(match[1]);
+        const result = extractErrorCapture(text, existingErrors, {
+            onParseError: error => console.error("Failed to parse captured error JSON", error),
+        });
 
-                // Deduplicate: check if same matiere+question already exists
-                let existingErrors: ErrorEntry[] = [];
-                try {
-                    existingErrors = validateErrorBank(JSON.parse(localStorage.getItem('med-pilot-error-bank') || '[]'));
-                } catch { /* start fresh */ }
-
-                const isDuplicate = existingErrors.some(e =>
-                    e.matiere === errorData.matiere && e.question === errorData.question
-                );
-
-                if (!isDuplicate) {
-                    const newError: ErrorEntry = {
-                        id: crypto.randomUUID(),
-                        matiere: errorData.matiere || "Non classé",
-                        question: errorData.question || "Question inconnue",
-                        erreur_commise: errorData.erreur_commise || "Erreur non spécifiée",
-                        correction: errorData.correction || "Voir débriefing",
-                        date: Date.now(),
-                        isExported: false,
-                    };
-                    const updated = [newError, ...existingErrors];
-                    localStorage.setItem('med-pilot-error-bank', JSON.stringify(updated));
-                    // Sync vers Supabase
-                    const supabase = createClient();
-                    supabase.auth.getUser().then(({ data: { user } }) => {
-                        if (user) supabase.from('user_data').upsert(
-                            { user_id: user.id, data_key: 'med-pilot-error-bank', data_value: updated },
-                            { onConflict: 'user_id,data_key' }
-                        );
-                    });
-                    captured = true;
-                }
-            } catch (e) {
-                console.error("Failed to parse captured error JSON", e);
-            }
+        if (result.capturedErrors.length > 0) {
+            localStorage.setItem('med-pilot-error-bank', JSON.stringify(result.errors));
+            saveErrorBank(result.errors).catch(error => {
+                console.warn('[SimulatorChat] Sauvegarde erreurs cloud échouée', error);
+            });
+            onErrorCaptured?.();
         }
 
-        cleanText = cleanText.replace(regex, '').trim();
-        if (captured) onErrorCaptured?.();
-        return cleanText;
+        return result.cleanText;
     }, [onErrorCaptured]);
-
     const sendMessage = async () => {
         if (!input.trim()) return;
         if (!apiKey) {
@@ -215,35 +150,18 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
         const newUserMessage: ChatMessage = {
             id: crypto.randomUUID(), role: 'user', text: input, timestamp: Date.now()
         };
+        historyMutationVersionRef.current += 1;
         setMessages(prev => [...prev, newUserMessage]);
         setInput("");
         setIsLoading(true);
 
         try {
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const effectiveModel = cloudModelId || "gemini-2.0-flash";
-            const model = genAI.getGenerativeModel({
-                model: effectiveModel,
-                systemInstruction: DP_SYSTEM_INSTRUCTIONS,
-                safetySettings: [
-                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                ],
+            const rawText = await askGemini({
+                apiKey,
+                modelId: cloudModelId || "gemini-2.0-flash",
+                prompt: input,
+                history: buildGeminiHistory(messages),
             });
-
-            const rawHistory = messages.filter(m => m.role !== 'system');
-            const firstUserIndex = rawHistory.findIndex(m => m.role === 'user');
-            const chatHistory = firstUserIndex !== -1
-                ? rawHistory.slice(firstUserIndex).map(m => ({ role: m.role, parts: [{ text: m.text }] }))
-                : [];
-
-            const chat = model.startChat({ history: chatHistory });
-            const result = await chat.sendMessage(input);
-            const response = await result.response;
-            let rawText: string;
-            try { rawText = response.text(); } catch { rawText = ''; }
 
             if (!rawText || rawText.trim().length === 0) {
                 setMessages(prev => [...prev, {
@@ -258,7 +176,6 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
             setMessages(prev => [...prev, {
                 id: crypto.randomUUID(), role: 'model', text: cleanText, timestamp: Date.now()
             }]);
-
         } catch (error: unknown) {
             const errorStr = String((error as Error)?.message || error || '');
             let errorText = "Erreur de connexion à l'IA.";

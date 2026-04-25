@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { GraduationCap } from "lucide-react";
-import { SimulatorChat } from "@/components/features/simulation/SimulatorChat";
+import { SimulatorChat } from "@/features/simulator-chat/SimulatorChat";
 import { ErrorPanel } from "@/components/features/simulation/ErrorPanel";
 import { AnkiExport } from "@/components/features/simulation/AnkiExport";
 

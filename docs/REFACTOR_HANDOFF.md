@@ -2,7 +2,7 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-25 (Phase 5 clôturée + Phase 6 cadrée)
+**Dernière mise à jour** : 2026-04-25 (Phase 7 Lot AJ code OK)
 **Mise à jour par** : Codex (audit reprise + finalisation semi-autonome)
 
 ---
@@ -19,9 +19,9 @@
 | Tag fin Phase 3 | `phase-3-done` sur `69666c7` |
 | Tag fin Phase 4 | `phase-4-done` sur `2ce3d73` |
 | Tag fin Phase 5 | `phase-5-done` sur `b7773c3` |
-| HEAD de la branche refactor | Phase 6 cadrée — confirmer avec `git log --oneline -10` |
+| HEAD de la branche refactor | Phase 7 Lot AJ code OK — confirmer avec `git log --oneline -10` |
 | Remote push | **non pushé** — tout est local |
-| Tests | 13 fichiers / **181 tests** / 0 échec |
+| Tests | 14 fichiers / **189 tests** / 0 échec |
 | Build Next.js | ✅ OK (11 routes statiques avec `/coming`) |
 | Smoke test Phase 1 | ✅ validé 2026-04-19 |
 | Smoke test Phase 2 Lot H + K | ✅ validés 2026-04-20 |
@@ -32,6 +32,24 @@
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+1512ad5 refactor(phase-7): step 7.6 — add Simulation entity foundation
+ced901d refactor(phase-7): step 7.5 — wire Strategy picker components
+41a3471 refactor(phase-7): step 7.5 — extract Strategy picker
+1d38cd5 fix(nav): restore À venir teaser route
+ba75218 refactor(phase-7): step 7.4 — wire SessionWidget imports
+0ce69bf refactor(phase-7): step 7.4 — move SessionWidget to features
+16b20c6 refactor(phase-7): step 7.3 — extract SessionTimer
+a5551b1 refactor(phase-7): step 7.2 — extract DifficultySelector
+722530d refactor(phase-7): step 7.1 — extract DayLoadSelector
+79b01fb docs(refactor): mark Phase 6 code complete and plan Phase 7
+5c8eed3 refactor(phase-6): step 6.7 — inline subjects and simulation pages
+21653e7 refactor(phase-6): step 6.6 — move subject components to features
+24ac19c refactor(phase-6): step 6.5 — inline cockpit page and delete HomeView
+4173dc7 refactor(phase-6): step 6.4 — extract RecentErrors widget
+f26cc50 refactor(phase-6): step 6.3 — extract TasksNotes widget
+6114355 refactor(phase-6): step 6.2 — extract EdnCountdown widget
+92df955 refactor(phase-6): step 6.1 — extract StatsBar widget
+e5b6c1e docs(refactor): close Phase 5 and plan Phase 6 lots
 b7773c3 refactor(phase-5): step 5.8 — delete PlanningView and planning shim   ← phase-5-done
 652b928 refactor(phase-5): step 5.7 — route planning page orchestrates features
 fe9f48c refactor(phase-5): step 5.5-5.6 — extract 3 view modes to features/planning-*
@@ -185,7 +203,7 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochaine action à exécuter — **Phase 7 Lot AJ**
+## 4. Prochaine action à exécuter — **Phase 7 Lot AK**
 
 Phase 5 **clôturée** le 2026-04-25 (tag `phase-5-done` sur `b7773c3`). Smoke vital validé : `/planning` fonctionne après suppression de `PlanningView.tsx` et du shim `src/types/planning.ts`.
 
@@ -198,7 +216,9 @@ Phase 6 est **code OK** : les trois vues restantes (`HomeView`, `SubjectsView`, 
 | AD | 6.6 | ✅ code OK | `SubjectCard`, `AddSubjectModal`, `SubjectDetailModal` déplacés vers `features/subject-list/`. `npm test` + `npm run build` OK. |
 | AE | 6.7 | ⚠️ code OK, smoke phase accumulé | `subjects/page.tsx` et `simulation/page.tsx` portent directement leur JSX. `SubjectsView.tsx`, `SimulationView.tsx` et le test orphelin sous `components/views` ont été supprimés/déplacés. `npm test` + `npm run build` OK. |
 
-Prochain lot autorisé sous réserve de prudence : **Phase 7 Lot AJ** (`7.7`) — migrer `SimulatorChat` vers `features/simulator-chat/` et brancher `entities/simulation`. Lot sensible : Gemini + capture erreur + chat history, smoke simulation requis après.
+Phase 7 est avancée jusqu'au **Lot AJ** (`7.7`) : `SimulatorChat` est déplacé vers `features/simulator-chat/` et branché sur `entities/simulation` pour Gemini, la capture d'erreurs et l'historique chat. Bug critique évité avant commit : l'hydratation cloud ne peut plus écraser une interaction locale tardive ni sauvegarder le fallback local avant la fin de lecture cloud.
+
+Prochain lot autorisé : **Phase 7 Lot AK** (`7.8`) — extraire le rendu d'un message chat en sous-composant pur. Lot faible, smoke regroupable avec le smoke simulation AJ.
 
 ### Smoke Phase 6 à accumuler puis valider
 
@@ -410,7 +430,7 @@ Phase 7 = découpe des gros composants features restants. Les lots qui touchent 
 | **AG** | 7.4 ✅ code OK | Déplacer `SessionWidget` vers `features/session-widget/` et mettre à jour les imports. `npm test` + `npm run build` OK. | moyen | session complet accumulé |
 | **AH** | 7.5 ✅ code OK | `StrategyModal` déplacé vers `features/strategy-picker/`, avec `ModeTabs` et `SubjectMultiSelect` extraits. `npm test` + `npm run build` OK. | moyen | stratégie accumulé |
 | **AI** | 7.6 ✅ | `entities/simulation/{types,gemini,model,api}.ts` créé en dormant. `extractErrorCapture` + `buildAnkiTsv` couverts par tests. `src/types/index.ts` ré-exporte `ChatMessage`, `ErrorEntry`, `Flashcard`. Tests 181→189, build OK. | moyen | non, dormant |
-| **AJ** | 7.7 | Migrer `SimulatorChat` vers `features/simulator-chat/` et brancher `entities/simulation`. | élevé | chat + capture erreur requis |
+| **AJ** | 7.7 ✅ code OK | `SimulatorChat` déplacé vers `features/simulator-chat/` et branché sur `entities/simulation` (`askGemini`, `extractErrorCapture`, `load/saveChatHistory`, `saveErrorBank`). Garde-fou anti-écrasement cloud tardif ajouté. Tests/build OK. | élevé | chat + capture erreur accumulé |
 | **AK** | 7.8 | Extraire le sous-composant message chat si présent. | faible | regroupable |
 | **AL** | 7.9 | Déplacer `ErrorPanel` vers `features/error-panel/` et utiliser `entities/simulation/api`. | faible à moyen | cahier d'erreurs |
 | **AM** | 7.10 | Déplacer/externaliser `AnkiExport` vers le module simulation final. | faible à moyen | export TSV |
@@ -536,4 +556,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-25 | Codex | Smoke vital Phase 5 validé par le user. Tag `phase-5-done` posé sur `b7773c3`. Handoff mis à jour pour cadrer la Phase 6 : Lot AB (`HomeView` widgets), Lot AC (`cockpit/page.tsx` final + suppression HomeView), Lot AD (subject-list), Lot AE (`SubjectsView`/`SimulationView` supprimés + tag Phase 6). |
 | 2026-04-25 | Codex | Phase 6 code OK : lots AB→AE commités, `HomeView`, `SubjectsView`, `SimulationView` supprimés/inlinés dans les routes, composants subject déplacés vers `features/subject-list`, test `TasksNotes` déplacé vers `features/home-widgets`. Tests 181 + build OK. Smoke cockpit/subjects/simulation et tag `phase-6-done` en attente. Phase 7 cadrée en lots AF→AM. |
 | 2026-04-25 | Codex | Correction hors refactor : restauration du teaser `À venir` supprimé en Phase 4. Ajout d'une vraie route Next `/coming` et retour de l'item de nav `À venir` avec `Sparkles`, sans réintroduire `ViewContext`. |
-| 2026-04-25 | Codex | Phase 7 AF→AI code OK : `SessionWidget` découpé/déplacé vers `features/session-widget`, `StrategyModal` déplacé vers `features/strategy-picker` avec `ModeTabs` + `SubjectMultiSelect`, `entities/simulation/*` ajouté en dormant avec tests purs (`extractErrorCapture`, `buildAnkiTsv`). Tests 181→189 + build OK. Smokes accumulés : cockpit, subjects, simulation, `/coming`, session, stratégie. |
+| 2026-04-25 | Codex | Phase 7 AF→AJ code OK : `SessionWidget` découpé/déplacé vers `features/session-widget`, `StrategyModal` déplacé vers `features/strategy-picker` avec `ModeTabs` + `SubjectMultiSelect`, `entities/simulation/*` ajouté puis branché dans `SimulatorChat`. `SimulatorChat` est maintenant dans `features/simulator-chat/`, avec Gemini, capture d'erreurs et historique chat délégués à `entities/simulation`. Bug critique pré-commit corrigé : pas de sauvegarde cloud du fallback local avant hydratation, et pas d'écrasement cloud tardif après interaction utilisateur. Tests 181→189 + build OK. Smokes accumulés : cockpit, subjects, simulation chat/capture, `/coming`, session, stratégie. |
