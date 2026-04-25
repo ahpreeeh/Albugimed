@@ -15,7 +15,7 @@ import {
     useSessionActions,
     useTotalElapsed,
 } from '@/entities/session/hooks';
-import { StrategyModal } from '@/components/features/session/StrategyModal';
+import { StrategyModal } from '@/features/strategy-picker/StrategyModal';
 import { DayLoadSelector } from './DayLoadSelector';
 import { DifficultySelector } from './DifficultySelector';
 import { SessionTimer, formatTime, useSessionTimer } from './SessionTimer';

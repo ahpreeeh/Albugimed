@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { StrategyModal } from "@/components/features/session/StrategyModal";
+import { StrategyModal } from "@/features/strategy-picker/StrategyModal";
 import { ThemeSettingsPanel } from "@/components/layout/ThemeSettingsPanel";
 import { cn } from "@/shared/lib/cn";
 import {

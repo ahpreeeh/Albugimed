@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Settings2, Calendar as CalendarIcon, X, Check, Info } from 'lucide-react';
+import { Settings2, X, Check, Info } from 'lucide-react';
 import { useSubjects } from '@/entities/subject/hooks';
 import { useStrategy } from '@/entities/strategy/hooks';
 import type { StrategyMode, VacationObjective, LearningScope, ActiveStrategy } from '@/entities/strategy/types';
-import { DUREES } from '@/entities/strategy/types';
 import { createEmptyStrategy } from '@/entities/strategy/model';
 import { cn } from '@/shared/lib/cn';
+import { ModeTabs } from './ModeTabs';
 
 interface StrategyModalProps {
     open: boolean;
@@ -151,310 +151,25 @@ export const StrategyModal = ({ open, onOpenChange }: StrategyModalProps) => {
                 {/* Body */}
                 <div className="p-5 space-y-4">
 
-                    {/* Mode 1 : Préparation d'examen */}
-                    <div className={cn(
-                        "border rounded-xl p-4 cursor-pointer transition-all",
-                        mode === 'preparation'
-                            ? "border-[var(--color-accent-border)] bg-[var(--color-accent-muted)]"
-                            : "border-[var(--color-border)] hover:border-[var(--color-border-active)]"
-                    )} onClick={() => setMode('preparation')}>
-                        <div className="flex items-start gap-3">
-                            <div className={cn(
-                                "mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                                mode === 'preparation'
-                                    ? "border-[var(--color-accent)] bg-[var(--color-accent)]"
-                                    : "border-[var(--color-text-hint)]"
-                            )}>
-                                {mode === 'preparation' && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Préparation d&#39;examen</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-                                    Progression guidée et structurée jusqu&#39;à l&#39;échéance
-                                </p>
-
-                                {mode === 'preparation' && (
-                                    <div className="mt-4 space-y-4 pl-3 border-l-2 border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
-                                        {/* Matières */}
-                                        <div>
-                                            <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                Matières à prioriser <span className="text-[var(--color-danger)]">*</span>
-                                            </label>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {subjects.map(s => (
-                                                    <button key={s.id}
-                                                        onClick={() => togglePreparationMatiere(s.id)}
-                                                        className={cn(
-                                                            "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
-                                                            preparationMatieres.includes(s.id)
-                                                                ? "app-btn-primary text-white"
-                                                                : "app-btn-secondary"
-                                                        )}>
-                                                        {s.title}
-                                                    </button>
-                                                ))}
-                                                {subjects.length === 0 && (
-                                                    <p className="text-[10px] text-[var(--color-text-hint)]">
-                                                        Aucune matière — ajoutez-en dans la section Matières
-                                                    </p>
-                                                )}
-                                            </div>
-                                            {preparationMatieres.length > 0 && (
-                                                <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-                                                    {preparationMatieres.length} matière{preparationMatieres.length > 1 ? 's' : ''} sélectionnée{preparationMatieres.length > 1 ? 's' : ''}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Date */}
-                                        <div>
-                                            <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                Date d&#39;examen <span className="text-[var(--color-danger)]">*</span>
-                                            </label>
-                                            <div className="relative">
-                                                <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-text-hint)]" />
-                                                <input
-                                                    type="date"
-                                                    value={preparationDate}
-                                                    onChange={e => setPreparationDate(e.target.value)}
-                                                    className="app-input pl-9 text-xs"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Mode 2 : Rush */}
-                    <div className={cn(
-                        "border rounded-xl p-4 cursor-pointer transition-all",
-                        mode === 'rush'
-                            ? "border-[var(--color-accent-border)] bg-[var(--color-accent-muted)]"
-                            : "border-[var(--color-border)] hover:border-[var(--color-border-active)]"
-                    )} onClick={() => setMode('rush')}>
-                        <div className="flex items-start gap-3">
-                            <div className={cn(
-                                "mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                                mode === 'rush'
-                                    ? "border-[var(--color-accent)] bg-[var(--color-accent)]"
-                                    : "border-[var(--color-text-hint)]"
-                            )}>
-                                {mode === 'rush' && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Examen (Rush)</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-                                    Intensif et focalisé sur l&#39;efficacité immédiate
-                                </p>
-
-                                {mode === 'rush' && (
-                                    <div className="mt-4 space-y-3 pl-3 border-l-2 border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
-                                        <div>
-                                            <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                Matières à travailler <span className="text-[var(--color-danger)]">*</span>
-                                            </label>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {subjects.map(s => (
-                                                    <button key={s.id}
-                                                        onClick={() => toggleRushMatiere(s.id)}
-                                                        className={cn(
-                                                            "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
-                                                            rushMatieres.includes(s.id)
-                                                                ? "app-btn-primary text-white"
-                                                                : "app-btn-secondary"
-                                                        )}>
-                                                        {s.title}
-                                                    </button>
-                                                ))}
-                                                {subjects.length === 0 && (
-                                                    <p className="text-[10px] text-[var(--color-text-hint)]">
-                                                        Aucune matière — ajoutez-en dans la section Matières
-                                                    </p>
-                                                )}
-                                            </div>
-                                            {rushMatieres.length > 0 && (
-                                                <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-                                                    {rushMatieres.length} matière{rushMatieres.length > 1 ? 's' : ''} sélectionnée{rushMatieres.length > 1 ? 's' : ''}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Mode 3 : Vacances */}
-                    <div className={cn(
-                        "border rounded-xl p-4 cursor-pointer transition-all",
-                        mode === 'vacances'
-                            ? "border-[var(--color-accent-border)] bg-[var(--color-accent-muted)]"
-                            : "border-[var(--color-border)] hover:border-[var(--color-border-active)]"
-                    )} onClick={() => setMode('vacances')}>
-                        <div className="flex items-start gap-3">
-                            <div className={cn(
-                                "mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                                mode === 'vacances'
-                                    ? "border-[var(--color-accent)] bg-[var(--color-accent)]"
-                                    : "border-[var(--color-text-hint)]"
-                            )}>
-                                {mode === 'vacances' && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Révision à long terme (Vacances)</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-                                    Flexible, pour consolider ou explorer à votre rythme
-                                </p>
-
-                                {mode === 'vacances' && (
-                                    <div className="mt-4 space-y-4 pl-3 border-l-2 border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
-                                        {/* Objectif */}
-                                        <div>
-                                            <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-2 block">
-                                                Quel est votre objectif ? <span className="text-[var(--color-danger)]">*</span>
-                                            </label>
-                                            <div className="space-y-2">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name="vacances-obj"
-                                                        checked={vacancesObjectif === 'revision'}
-                                                        onChange={() => setVacancesObjectif('revision')}
-                                                    />
-                                                    <span className="text-[12px] text-[var(--color-text-primary)]">Réviser des chapitres existants</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name="vacances-obj"
-                                                        checked={vacancesObjectif === 'apprentissage'}
-                                                        onChange={() => setVacancesObjectif('apprentissage')}
-                                                    />
-                                                    <span className="text-[12px] text-[var(--color-text-primary)]">Apprendre de nouveaux chapitres</span>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        {/* Sub-fields for revision */}
-                                        {vacancesObjectif === 'revision' && (
-                                            <div className="space-y-3 pl-3 border-l-2 border-[var(--color-border)]">
-                                                <div>
-                                                    <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                        Matières à réviser <span className="text-[var(--color-danger)]">*</span>
-                                                    </label>
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {subjects.map(s => (
-                                                            <button key={s.id}
-                                                                onClick={() => toggleVacancesMatiere(s.id)}
-                                                                className={cn(
-                                                                    "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
-                                                                    vacancesMatieres.includes(s.id)
-                                                                        ? "app-btn-primary text-white"
-                                                                        : "app-btn-secondary"
-                                                                )}>
-                                                                {s.title}
-                                                            </button>
-                                                        ))}
-                                                        {subjects.length === 0 && (
-                                                            <p className="text-[10px] text-[var(--color-text-hint)]">
-                                                                Aucune matière — ajoutez-en dans la section Matières
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    {vacancesMatieres.length > 0 && (
-                                                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-                                                            {vacancesMatieres.length} matière{vacancesMatieres.length > 1 ? 's' : ''} sélectionnée{vacancesMatieres.length > 1 ? 's' : ''}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                        Durée de la période <span className="text-[var(--color-danger)]">*</span>
-                                                    </label>
-                                                    <select value={vacancesDuree}
-                                                        onChange={e => setVacancesDuree(e.target.value)}
-                                                        className="app-input text-xs">
-                                                        <option value="">Sélectionnez une durée</option>
-                                                        {DUREES.map(d => (
-                                                            <option key={d.value} value={d.value}>{d.label}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Sub-fields for apprentissage */}
-                                        {vacancesObjectif === 'apprentissage' && (
-                                            <div className="space-y-3 pl-3 border-l-2 border-[var(--color-border)]">
-                                                <div>
-                                                    <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                        Matières à travailler <span className="text-[var(--color-danger)]">*</span>
-                                                    </label>
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {subjects.map(s => (
-                                                            <button key={s.id}
-                                                                onClick={() => toggleVacancesMatiere(s.id)}
-                                                                className={cn(
-                                                                    "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
-                                                                    vacancesMatieres.includes(s.id)
-                                                                        ? "app-btn-primary text-white"
-                                                                        : "app-btn-secondary"
-                                                                )}>
-                                                                {s.title}
-                                                            </button>
-                                                        ))}
-                                                        {subjects.length === 0 && (
-                                                            <p className="text-[10px] text-[var(--color-text-hint)]">
-                                                                Aucune matière — ajoutez-en dans la section Matières
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    {vacancesMatieres.length > 0 && (
-                                                        <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-                                                            {vacancesMatieres.length} matière{vacancesMatieres.length > 1 ? 's' : ''} sélectionnée{vacancesMatieres.length > 1 ? 's' : ''}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-2 block">
-                                                        Périmètre d&#39;apprentissage <span className="text-[var(--color-danger)]">*</span>
-                                                    </label>
-                                                    <div className="space-y-2">
-                                                        <label className="flex items-center gap-2 cursor-pointer">
-                                                            <input type="radio" name="perimetre"
-                                                                checked={vacancesPerimetre === 'coeur'}
-                                                                onChange={() => setVacancesPerimetre('coeur')}
-                                                            />
-                                                            <span className="text-[12px] text-[var(--color-text-primary)]">Cœur du collège / de la matière</span>
-                                                        </label>
-                                                        <label className="flex items-center gap-2 cursor-pointer">
-                                                            <input type="radio" name="perimetre"
-                                                                checked={vacancesPerimetre === 'elargissement'}
-                                                                onChange={() => setVacancesPerimetre('elargissement')}
-                                                            />
-                                                            <span className="text-[12px] text-[var(--color-text-primary)]">Élargissement au-delà du cœur</span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                                                        Durée que vous vous fixez <span className="text-[var(--color-danger)]">*</span>
-                                                    </label>
-                                                    <select value={vacancesDuree}
-                                                        onChange={e => setVacancesDuree(e.target.value)}
-                                                        className="app-input text-xs">
-                                                        <option value="">Sélectionnez une durée</option>
-                                                        {DUREES.map(d => (
-                                                            <option key={d.value} value={d.value}>{d.label}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
+                    <ModeTabs
+                        subjects={subjects}
+                        mode={mode}
+                        setMode={setMode}
+                        preparationMatieres={preparationMatieres}
+                        togglePreparationMatiere={togglePreparationMatiere}
+                        preparationDate={preparationDate}
+                        setPreparationDate={setPreparationDate}
+                        rushMatieres={rushMatieres}
+                        toggleRushMatiere={toggleRushMatiere}
+                        vacancesObjectif={vacancesObjectif}
+                        setVacancesObjectif={setVacancesObjectif}
+                        vacancesMatieres={vacancesMatieres}
+                        toggleVacancesMatiere={toggleVacancesMatiere}
+                        vacancesDuree={vacancesDuree}
+                        setVacancesDuree={setVacancesDuree}
+                        vacancesPerimetre={vacancesPerimetre}
+                        setVacancesPerimetre={setVacancesPerimetre}
+                    />
                     {/* Info message */}
                     {getInfoMessage() && (
                         <div className="flex items-start gap-2.5 rounded-xl p-3 bg-[var(--color-accent-muted)] border border-[var(--color-accent-border)]">
