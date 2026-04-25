@@ -2,8 +2,8 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-20 (Phase 3 en cours — step 3.8 codé, smoke test R requis)
-**Mise à jour par** : Codex (session interactive, audit + reprise semi-autonome)
+**Dernière mise à jour** : 2026-04-25 (Phase 3 clôturée — tag `phase-3-done` posé après smoke R + 2 fix bonus)
+**Mise à jour par** : Claude (session reprise, fix logique métier plafond + clôture Phase 3)
 
 ---
 
@@ -16,18 +16,24 @@
 | Tag de rollback | `backup/pre-refactor-v2` (HEAD pristine de `main` avant tout refactor) |
 | Tag fin Phase 1 | `phase-1-done` sur `e853cac` |
 | Tag fin Phase 2 | `phase-2-done` sur `94b83d3` |
-| HEAD de la branche refactor | Phase 3 en cours — confirmer avec `git log --oneline -10` |
+| Tag fin Phase 3 | `phase-3-done` sur `69666c7` (HEAD courant) |
+| HEAD de la branche refactor | `69666c7` — `fix(migration): add med-pilot-daily-session to KNOWN_KEYS` |
 | Remote push | **non pushé** — tout est local |
-| Tests | 12 fichiers / 142 tests / 0 échec |
+| Tests | 12 fichiers / **144 tests** / 0 échec |
 | Build Next.js | ✅ OK (6 routes statiques, middleware 79.6 kB — inchangé depuis Phase 1) |
 | Smoke test Phase 1 | ✅ validé 2026-04-19 (modifs dans l'app, pas de crash, sauvegarde Supabase OK) |
 | Smoke test Phase 2 Lot H | ✅ validé 2026-04-20 (SubjectContext migré sur api.ts, persistance OK) |
 | Smoke test Phase 2 Lot K | ✅ validé 2026-04-20 (Strategy migrée, recharge + modification OK) |
 | Smoke test Phase 3 Lot Q | ✅ validé 2026-04-20 (façade Zustand : génération, timer, progression et refresh OK) |
+| Smoke test Phase 3 Lot R | ✅ validé 2026-04-25 (consommateurs branchés directement sur Zustand) |
 
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+69666c7 fix(migration): add med-pilot-daily-session to KNOWN_KEYS   ← phase-3-done
+6c033e5 fix(session): drop cours task in plafond/intensif mode
+d2bcae4 fix(session): add targeted reset for completed daily session
+416fcc6 refactor(phase-3): step 3.8 — migrate Session consumers to hooks
 847992e refactor(phase-3): step 3.7 — facade SessionEngineContext on Zustand
 7c86fa1 refactor(phase-3): step 3.6 — add Session selectors hooks
 147bff8 refactor(phase-3): step 3.5 — add Session Zustand store
@@ -160,39 +166,31 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochaine action à exécuter — **Smoke test utilisateur du Lot R**
+## 4. Prochaine action à exécuter — **Phase 4 : vraies routes Next.js**
 
-Phase 2 **validée** (10 étapes, 2 smoke tests user OK). La **Phase 3** a déjà validé son premier flip-switch `Q` : `SessionEngineContext.tsx` sur Zustand n'a pas introduit de bug visible au smoke test utilisateur. Le lot `R` va plus loin : les consommateurs lisent désormais Zustand directement et la façade temporaire a été supprimée.
+Phase 3 **clôturée** le 2026-04-25. Tag `phase-3-done` sur `69666c7`. Smoke R validé. Deux fixes bonus posés en clôture :
 
-**Point de contrôle** : à partir de `R`, la surface de régression reste visible côté cockpit même si le comportement métier attendu ne change pas. Avant tout tag `phase-3-done` ou correctif connexe, il faut valider ce branchement final dans l'app.
+1. **`6c033e5` fix(session): drop cours task in plafond/intensif mode** — bug logique métier pré-existant (préservé 1:1 par le refactor) : en charge plafond, les chapitres `nouveau` produisaient `cours + annale L1` comme dans plancher/standard. L'intensif est censé sauter l'apprentissage. Filtre ajouté en bout de `generateDailyTasks`. 2 tests régression + 1 test mis à jour. Plancher/standard inchangés.
+2. **`69666c7` fix(migration): add med-pilot-daily-session to KNOWN_KEYS** — clôture de l'attention point #3 §5c. La clé de session du jour était absente de `useMigration.ts` → un navigateur jamais migré aurait perdu sa session locale. Désormais migrée comme les autres `med-pilot-*`.
 
-### Smoke test R — Consommateurs branchés directement sur Zustand (step 3.8 déjà codé)
+### Phase 4 — Vraies routes Next.js (1 jour, plan §Phase 4)
 
-Risque : **moyen**. Deuxième flip-switch réel de la Phase 3.
+Objectif : passer de `ViewContext` + `page.tsx` switch à de vraies routes App Router. Débloque URL partageables, back/forward, code splitting, prefetching.
 
-| Step | Action | Fichiers |
-|---|---|---|
-| 3.8 | `SessionWidget.tsx` lit directement `entities/session/hooks` + `useSubjects()` + `useStrategy()`, `LayoutShell.tsx` n'embarque plus `SessionEngineProvider`, `src/context/SessionEngineContext.tsx` est supprimé et `src/types/session.ts` est retiré. | `src/components/features/session/SessionWidget.tsx`, `src/components/layout/LayoutShell.tsx`, `src/entities/session-timing/model.ts`, `src/context/SessionEngineContext.tsx`, `src/types/session.ts` |
+**Risque** : **moyen** — la migration des routes touche le shell de l'app + le middleware d'auth. Smoke obligatoire après chaque sous-lot.
 
-**Vérification R déjà faite côté code** : `npm test` vert, `npm run build` vert.
+**Fichiers critiques à lire avant** :
+- `src/middleware.ts` (matcher d'auth — `/login` et `/restore` doivent rester hors `(app)`)
+- `src/components/layout/LayoutShell.tsx` (5 niveaux de providers actuels)
+- `src/context/ViewContext.tsx` (sera supprimé)
+- `src/components/layout/TopNav.tsx` (passera de `useView()` à `usePathname()` + `useRouter()`)
 
-**Smoke test utilisateur obligatoire maintenant** :
-- si la session du jour est déjà terminée, utiliser le bouton `Réinitialiser la session du jour` visible dans l'état "Toutes les sessions sont terminées" ; il appelle `clearSession()` et supprime uniquement `med-pilot-daily-session`
-- login avec un compte de test
-- ouvrir le cockpit avec une stratégie déjà configurée
-- générer une session du jour si nécessaire
-- démarrer la tâche courante puis vérifier que le timer tourne
-- mettre en pause puis reprendre si cette action est utilisée
-- compléter une tâche avec un rating puis vérifier que la progression sujet est mise à jour
-- utiliser `skip` puis vérifier le passage à la tâche suivante
-- rafraîchir la page et vérifier que la session du jour est restaurée
-- vérifier que l'avancement visible et le temps total restent cohérents après refresh
+**Plan d'attaque** : voir §5d ci-dessous.
 
-### Prochaine phase logique
+### Optionnel avant Phase 4 — clean-up léger (pas de smoke requis)
 
-Après smoke R :
-- si OK → clôture Phase 3 (`phase-3-done`) puis traitement explicite du point restant `useMigration.ts`
-- si KO → rollback immédiat du commit R uniquement
+- `src/types/session.ts` : encore en place comme BC shim. Peut être supprimé maintenant que les 3 consommateurs identifiés au step 3.8 sont migrés. À contre-vérifier (`grep -r "@/types/session\|from ['\\\"]\\./session['\\\"]"` doit retourner 0).
+- Tests : 144 verts, build green, tsc clean. Aucun warning à traiter.
 
 ---
 
@@ -262,7 +260,7 @@ Imposé par le user pour limiter le blast radius. Chaque lot se termine par un s
 
 **Chainable autonomement (risque faible, pas de smoke)** : L + M + N + O + P. Stop obligatoire avant Q.
 
-### Critères de succès Phase 3
+### Critères de succès Phase 3 (bilan réel)
 
 - [x] `entities/session/{types,model,api,store,hooks}.ts` + `__tests__/` existent
 - [x] `zustand` présent dans `package.json`
@@ -270,16 +268,49 @@ Imposé par le user pour limiter le blast radius. Chaque lot se termine par un s
 - [x] `generateDailyTasks` et compagnie testées en isolation (~200 lig de tests unitaires)
 - [x] Clé de stockage `med-pilot-daily-session` **préservée** dans `STORAGE_KEYS`
 - [x] Format sérialisé des sessions **inchangé** côté `api.ts` (round-trip des accès repository couvert)
-- [x] Tests passent de 62 → 142
-- [ ] Tag `phase-3-done` posé
-- [ ] Smoke tests user passés (Lot Q validé, Lot R en attente)
+- [x] Tests passent de 62 → **144** (+1 commit fix qui ajoute 2 tests régression plafond)
+- [x] Tag `phase-3-done` posé sur `69666c7`
+- [x] Smoke tests user passés (Lot Q validé 2026-04-20, Lot R validé 2026-04-25)
+- [x] Bonus : bug logique métier `plafond → cours` corrigé (`6c033e5`)
+- [x] Bonus : `med-pilot-daily-session` ajouté à `KNOWN_KEYS` de `useMigration.ts` (`69666c7`)
 
-### Points d'attention spécifiques Phase 3
+### Points d'attention spécifiques Phase 3 (bilan)
 
-1. **Règle dure** : `generateDailyTasks(strategy, subjects, load)` reçoit les données en **paramètres**, jamais via un autre store (cf. invariant §7.5). Le hook d'orchestration `features/session-widget/useSessionWidget.ts` (créé plus tard en Phase 7) composera les 3 stores ; en attendant, c'est `SessionWidget.tsx` qui compose explicitement `useSubjects()` + `useStrategy()` + les selectors session.
-2. **Persist middleware Zustand + userDataRepository** : hydratation asynchrone. Prévoir `isHydrated: false` au boot + skeleton côté consommateurs le temps du premier load cloud (déjà le pattern actuel via `localStorage` init + `useEffect` de chargement Supabase).
-3. **`med-pilot-daily-session` absent de `KNOWN_KEYS`** : l'écart existe toujours après le Lot R. Il ne bloque pas le fonctionnement normal quand l'utilisateur a déjà migré, mais doit être traité avant la clôture effective de la Phase 3 pour que `useMigration.ts` ne l'ignore plus silencieusement sur un navigateur encore non migré.
-4. **Tests Lot M = artefact critique** : ils figent le comportement actuel AVANT tout réarrangement. Si un test capture mal un edge case, le refactor Zustand introduira un bug silencieux. Review attentive recommandée avant Lot O.
+1. ✅ **Règle dure** : `generateDailyTasks` reçoit toujours `(strategy, subjects, load)` en paramètres. Le store ne lit jamais un autre store. Composé dans `SessionWidget.tsx` (en attendant `features/session-widget/useSessionWidget.ts` en Phase 7).
+2. ✅ **Hydratation asynchrone** : `isHydrated` exposé via le store + selectors. Pattern miroir de `useCloudValue` (localStorage instant + cloud authoritative) → pas de régression UX.
+3. ✅ **`med-pilot-daily-session` dans `KNOWN_KEYS`** : commit `69666c7` referme le point. Les navigateurs déjà migrés ne sont pas impactés (la migration ne tourne qu'une fois via `med-pilot-migration-done`).
+4. ✅ **Tests Lot M** : 46 tests unitaires sur `model.ts` ont fait leur job — la Phase 3 n'a introduit aucune régression métier détectable. Le seul bug corrigé (`plafond → cours`) était pré-existant à Phase 3 et a été révélé par la review post-smoke, pas par le refactor.
+
+### Note pour Phase 4+ : `src/types/session.ts` BC shim
+
+Toujours présent comme re-export à la fin de Phase 3. Peut être supprimé immédiatement avant Phase 4 (commit indépendant) — vérifier d'abord que `grep -r "@/types/session"` ne retourne plus aucun consommateur.
+
+---
+
+## 5d. Plan des lots pour la Phase 4
+
+Phase 4 = transformation du pseudo-routing `useView()` en vraies routes Next.js App Router. Plan §Phase 4 lignes 218-228 du `REFACTOR_PLAN.md`. Risque moyen car touche shell + middleware.
+
+| Lot | Étapes | Ce qu'il contient | Risque | Smoke |
+|---|---|---|---|---|
+| **S** | 4.1 | Créer `src/app/(app)/layout.tsx` (`"use client"`, AppShell + auth guard) sans toucher aux pages existantes. App continue de fonctionner via la racine. | faible (additif) | non |
+| **T** | 4.2 → 4.4 | Créer `src/app/(app)/{cockpit,subjects,planning,simulation}/page.tsx`. Chaque page importe la `*View` actuelle telle quelle (`<HomeView />`, etc.). `src/app/page.tsx` racine fait `redirect('/cockpit')`. | **moyen** | **obligatoire** : login → 4 routes naviguent → URLs visibles → back/forward → reload sur chacune restaure le state |
+| **U** | 4.5 → 4.6 | Migrer `TopNav.tsx` de `useView()` vers `usePathname()` + `<Link>` data-active. Migrer le clic dans `RecentErrors` (`setActiveView('simulation')` → `router.push('/simulation')`). | faible | smoke léger : navigation + Recent Errors → Simulation |
+| **V** | 4.7 → 4.8 | Suppression de `src/context/ViewContext.tsx`. Déplacement de `AppProviders` vers `src/app/providers.tsx` instancié 1× dans le RootLayout (stores conservés entre navigations). | **moyen** ⚠ | **obligatoire** : créer un événement, cocher un sujet, démarrer une session puis naviguer entre routes — tout doit persister sans démontage de provider. **Tag `phase-4-done`** après. |
+
+**Ordre strict** : S → T (smoke) → U → V (smoke + tag).
+
+**À ne PAS oublier** : lire `src/middleware.ts` AVANT le lot T pour confirmer que le matcher couvre bien `/cockpit /subjects /planning /simulation` et exclut `/login /restore`. Ajuster si besoin avant le smoke.
+
+### Critères de succès Phase 4
+
+- [ ] 4 routes `(app)/cockpit /subjects /planning /simulation` créées et visibles dans l'URL
+- [ ] `src/context/ViewContext.tsx` supprimé
+- [ ] `TopNav.tsx` utilise `usePathname()` + `<Link>`
+- [ ] `AppProviders` instancié 1× dans `app/layout.tsx` racine — stores survivent à la navigation
+- [ ] Middleware d'auth : `/login` et `/restore` toujours publiques, autres routes protégées
+- [ ] Tag `phase-4-done` posé
+- [ ] Smoke complet : login → 4 routes → reload chacune → back/forward → état préservé
 
 ---
 
@@ -394,3 +425,4 @@ Tag de rollback : backup/pre-refactor-v2
 | 2026-04-20 | Claude (session interactive, semi-autonome souple) | **Phase 2 terminée en une journée** : 10 steps / 10 commits code + 1 commit docs. Lots F → K exécutés dans l'ordre strict, smoke tests user OK après H et K. Tag `phase-2-done` posé sur `94b83d3`. Tests 39 → 62 (+12 Subject, +12 Strategy, 0 régression). Build 79.6 kB middleware inchangé. 25 imports migrés vers `entities/subject/*` et `entities/strategy/*`. `src/types/strategy.ts` supprimé. Mini-surprise gérée : 1 référence relative `./strategy` dans `src/types/session.ts` que le grep alias-only avait manquée, corrigée au step 2.10. **Phase 3 cadrée** : 7 lots L→R (voir §5c). Chainables autonomement (pures additions) : L+M+N+O+P. Stop obligatoire avant Q (flip switch persistance). Prochain lot : Lot L. |
 | 2026-04-20 | Codex | Audit + reprise Phase 3. État réel resynchronisé avec le dépôt : steps 3.1 à 3.4 déjà commités (`633ac86`, `f0482f8`, `ce66928`, `143b04e`). Step 3.5 commit `147bff8` : store Zustand dormant + tests renforcés. Deux bugs critiques corrigés avant commit : réhydratation qui conservait un état mémoire obsolète et course asynchrone pouvant perdre des entrées d'historique. Step 3.6 commit `7c86fa1` : selectors Zustand dormants (`entities/session/hooks.ts`). Step 3.7 commit `847992e` : `SessionEngineContext.tsx` devient façade sur Zustand, API publique conservée, build + 142 tests OK. Smoke test utilisateur du lot Q validé ensuite (génération, timer, progression, refresh OK). Step 3.8 codé localement : `SessionWidget` branché directement sur les selectors Zustand, provider retiré de `LayoutShell`, `SessionEngineContext.tsx` et `src/types/session.ts` supprimés, build + 142 tests OK. **Stop ici en attente du smoke test utilisateur du lot R** avant clôture de la Phase 3. |
 | 2026-04-20 | Codex | Déblocage minimal pour le smoke test Phase 3 : ajout d'un bouton UI `Réinitialiser la session du jour` dans l'état "Toutes les sessions sont terminées". Il appelle le `clearSession()` déjà existant et ne touche qu'à `med-pilot-daily-session` ; historique, matières, stratégie et session timing restent inchangés. Objectif unique : permettre de regénérer une session du jour sans modifier le comportement métier normal hors reset ciblé. |
+| 2026-04-25 | Claude (session reprise, semi-autonome souple) | **Phase 3 clôturée**. Smoke test Lot R validé par le user. Deux fixes posés en clôture : (1) `6c033e5 fix(session): drop cours task in plafond/intensif mode` — bug logique métier pré-existant détecté pendant le smoke (`plafond` proposait `cours+annale L1` au lieu d'annales seules). Filtre ajouté en bout de `generateDailyTasks`, plancher/standard inchangés, 1 test mis à jour + 2 tests régression ajoutés. (2) `69666c7 fix(migration): add med-pilot-daily-session to KNOWN_KEYS` — clôture de l'attention point #3 §5c. Tests 142 → **144**, tsc/build green. Tag `phase-3-done` posé sur `69666c7`. **Phase 4 cadrée** : 4 lots S→V (voir §5d), routing Next.js App Router. Risque moyen, smoke obligatoire à T et V. |
