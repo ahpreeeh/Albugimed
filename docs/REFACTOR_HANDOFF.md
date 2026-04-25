@@ -196,7 +196,7 @@ Phase 6 cible les trois vues restantes encore dans `src/components/views/` : `Ho
 | AB | 6.1 → 6.4 | ✅ code OK | `StatsBar`, `EdnCountdown`, `TasksNotes`, `RecentErrors` extraits vers `features/home-widgets/`. `npm test` + `npm run build` OK. |
 | AC | 6.5 | ⚠️ code OK, smoke cockpit accumulé | `cockpit/page.tsx` assemble directement le cockpit et `HomeView.tsx` est supprimé. `npm test` + `npm run build` OK. |
 | AD | 6.6 | ✅ code OK | `SubjectCard`, `AddSubjectModal`, `SubjectDetailModal` déplacés vers `features/subject-list/`. `npm test` + `npm run build` OK. |
-| AE | 6.7 | ⏳ | Remplacer `SubjectsView` et `SimulationView` par leurs pages, puis supprimer les vues. Risque moyen, smoke final Phase 6 requis + tag `phase-6-done`. |
+| AE | 6.7 | ⚠️ code OK, smoke phase accumulé | `subjects/page.tsx` et `simulation/page.tsx` portent directement leur JSX. `SubjectsView.tsx`, `SimulationView.tsx` et le test orphelin sous `components/views` ont été supprimés/déplacés. `npm test` + `npm run build` OK. |
 
 ### Smoke Phase 6 à accumuler puis valider
 
@@ -388,10 +388,10 @@ Phase 6 = suppression progressive des vues restantes dans `src/components/views/
 - [x] `features/home-widgets/` contient les widgets cockpit extraits
 - [x] `src/components/views/HomeView.tsx` supprimé
 - [x] `features/subject-list/` contient les composants subject
-- [ ] `src/components/views/{SubjectsView,SimulationView}.tsx` supprimés
-- [ ] `src/components/views/` supprimé ou ne contient plus que des tests déplacés
-- [ ] `cockpit/page.tsx`, `subjects/page.tsx`, `simulation/page.tsx` sont les orchestrateurs directs (`cockpit/page.tsx` fait)
-- [ ] Tests + build verts
+- [x] `src/components/views/{SubjectsView,SimulationView}.tsx` supprimés
+- [x] `src/components/views/` supprimé ou ne contient plus que des tests déplacés
+- [x] `cockpit/page.tsx`, `subjects/page.tsx`, `simulation/page.tsx` sont les orchestrateurs directs
+- [x] Tests + build verts
 - [ ] Smoke cockpit/subjects/simulation validé
 - [ ] Tag `phase-6-done` posé
 
