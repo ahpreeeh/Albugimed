@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
     Play, Square, ArrowRight, SkipForward, Settings2,
     Clock, Zap, Target, CheckCircle2, Trophy, Pause, RotateCcw,
@@ -13,7 +13,6 @@ import {
     useDailySession,
     useHasSessionToday,
     useSessionActions,
-    useSessionStore,
     useTotalElapsed,
 } from '@/entities/session/hooks';
 import { StrategyModal } from './StrategyModal';
@@ -25,32 +24,61 @@ import { cn } from '@/shared/lib/cn';
 import { toLocalISOString } from '@/shared/lib/dates';
 
 // ─── Timer hook (with pause support) ─────────────────────────────────
-function useTimer(isRunning: boolean, isPaused: boolean): number {
-    const [elapsed, setElapsed] = useState(0);
-    const bankedMsRef = useRef(0);
-    const segmentStartRef = useRef(0);
+//
+// Le temps écoulé est dérivé du timestamp `startedAt` de la tâche en
+// cours, qui est persisté (cloud + localStorage). Quand le widget se
+// démonte/remonte (par exemple après une navigation entre routes),
+// l'horloge ne repart PAS à zéro : elle reprend à `Date.now() - startedAt`.
+//
+// La pause reste un état local au widget (non persisté entre nav).
+// Si l'utilisateur met en pause puis change de route, à son retour
+// le timer apparaîtra "running" (pas plus paused) — le compromis de
+// simplicité ; persister l'état de pause demanderait de l'ajouter au
+// modèle de tâche.
+function useTimer(startedAt: number | null, isPaused: boolean): number {
+    const [now, setNow] = useState(() => Date.now());
+    const pauseAccumRef = useRef(0);
+    const pauseStartRef = useRef<number | null>(null);
+    const frozenElapsedRef = useRef<number | null>(null);
+    const lastStartedAtRef = useRef<number | null>(null);
 
+    // Reset des accumulateurs quand la tâche change (différent startedAt)
     useEffect(() => {
-        if (!isRunning) {
-            setElapsed(0);
-            bankedMsRef.current = 0;
-            segmentStartRef.current = 0;
+        if (lastStartedAtRef.current !== startedAt) {
+            pauseAccumRef.current = 0;
+            pauseStartRef.current = null;
+            frozenElapsedRef.current = null;
+            lastStartedAtRef.current = startedAt;
         }
-    }, [isRunning]);
+    }, [startedAt]);
 
+    // Tracking des transitions pause/resume
     useEffect(() => {
-        if (!isRunning || isPaused) return;
-        segmentStartRef.current = Date.now();
-        const interval = setInterval(() => {
-            setElapsed(bankedMsRef.current + (Date.now() - segmentStartRef.current));
-        }, 1000);
-        return () => {
-            bankedMsRef.current += Date.now() - segmentStartRef.current;
-            clearInterval(interval);
-        };
-    }, [isRunning, isPaused]);
+        if (!startedAt) return;
+        if (isPaused) {
+            frozenElapsedRef.current = Date.now() - startedAt - pauseAccumRef.current;
+            pauseStartRef.current = Date.now();
+        } else if (pauseStartRef.current !== null) {
+            pauseAccumRef.current += Date.now() - pauseStartRef.current;
+            pauseStartRef.current = null;
+            frozenElapsedRef.current = null;
+            setNow(Date.now()); // refresh immédiat à la reprise
+        }
+    }, [isPaused, startedAt]);
 
-    return elapsed;
+    // Tick toutes les secondes quand la tâche tourne
+    useEffect(() => {
+        if (!startedAt || isPaused) return;
+        setNow(Date.now()); // refresh immédiat au montage / start
+        const interval = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(interval);
+    }, [startedAt, isPaused]);
+
+    if (!startedAt) return 0;
+    if (isPaused && frozenElapsedRef.current !== null) {
+        return frozenElapsedRef.current;
+    }
+    return Math.max(0, now - startedAt - pauseAccumRef.current);
 }
 
 function formatTime(ms: number): string {
@@ -144,16 +172,18 @@ export const SessionWidget = () => {
     const pendingDurationRef = useRef(0);
 
     const isRunning = currentTask?.status === 'in-progress';
-    const liveTimer = useTimer(isRunning, isPaused);
+    // Timer dérive du startedAt persisté → survit aux navigations entre routes
+    // (cf. useTimer) au lieu de repartir à zéro à chaque remount du widget.
+    const liveTimer = useTimer(
+        isRunning ? currentTask?.startedAt ?? null : null,
+        isPaused,
+    );
 
-    useLayoutEffect(() => {
-        useSessionStore.setState({
-            session: null,
-            history: [],
-            isHydrated: false,
-        });
-    }, [today]);
-
+    // Hydratation : appelle le store qui filtre lui-même par date.
+    // Pas de reset préalable : le store est un singleton qui doit conserver
+    // son état à travers les navigations entre routes (Phase 4 Lot V).
+    // Si la date a changé (passage minuit), `hydrate(today)` se chargera
+    // de jeter la session de la veille via son filtre interne.
     useEffect(() => {
         void hydrate(today);
     }, [hydrate, today]);
