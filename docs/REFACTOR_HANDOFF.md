@@ -187,9 +187,10 @@ Objectif : passer de `ViewContext` + `page.tsx` switch à de vraies routes App R
 
 **Plan d'attaque** : voir §5d ci-dessous.
 
-### Optionnel avant Phase 4 — clean-up léger (pas de smoke requis)
+### État pré-Phase-4
 
-- `src/types/session.ts` : encore en place comme BC shim. Peut être supprimé maintenant que les 3 consommateurs identifiés au step 3.8 sont migrés. À contre-vérifier (`grep -r "@/types/session\|from ['\\\"]\\./session['\\\"]"` doit retourner 0).
+- `src/types/session.ts` : déjà supprimé au step 3.8 (commit `416fcc6`) — pas de clean-up nécessaire.
+- `src/types/` ne contient plus que `index.ts` (types divers `ChatMessage`, `ErrorEntry`, `Flashcard`, `MedPilotBackup`, `ImportResult`) et `planning.ts` (à migrer en Phase 5 vers `entities/planning/types.ts`).
 - Tests : 144 verts, build green, tsc clean. Aucun warning à traiter.
 
 ---
