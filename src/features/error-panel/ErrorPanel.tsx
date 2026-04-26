@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useCloudStorage } from '@/hooks/useCloudStorage';
 import {
     AlertCircle, ChevronDown, ChevronRight, Trash2, Pencil, Plus, X, Check,
     Download,
 } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
-import type { ErrorEntry } from '@/types';
-import { validateErrorBank } from '@/shared/lib/validators';
+import { useErrorBank } from '@/entities/simulation/hooks';
+import type { ErrorEntry } from '@/entities/simulation/types';
 
 type FilterMode = 'all' | 'new' | 'exported';
 
@@ -18,8 +17,7 @@ interface ErrorPanelProps {
 }
 
 export const ErrorPanel = ({ refreshTrigger: _refreshTrigger, onRequestAnki }: ErrorPanelProps) => {
-    const { data: rawErrors, save: saveErrors } = useCloudStorage<ErrorEntry[]>('med-pilot-error-bank', []);
-    const errors = validateErrorBank(rawErrors);
+    const { errors, save: saveErrors } = useErrorBank();
     const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
     const [filter, setFilter] = useState<FilterMode>('all');
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -75,14 +73,12 @@ export const ErrorPanel = ({ refreshTrigger: _refreshTrigger, onRequestAnki }: E
         });
     };
 
-    // Filtering
     const filtered = errors.filter(e => {
         if (filter === 'new') return !e.isExported;
         if (filter === 'exported') return !!e.isExported;
         return true;
     });
 
-    // Group by subject
     const grouped = filtered.reduce<Record<string, ErrorEntry[]>>((acc, e) => {
         (acc[e.matiere] = acc[e.matiere] || []).push(e);
         return acc;
