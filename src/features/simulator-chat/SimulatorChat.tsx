@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, RefreshCw, Bot, AlertTriangle, Settings, Maximize2, Minimize2, Lock } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import type { ChatMessage, ErrorEntry } from '@/entities/simulation/types';
-import { validateChatMessages, validateErrorBank } from '@/shared/lib/validators';
+import { validateChatMessages, validateErrorBank } from '@/entities/simulation/validators';
 import { useGeminiConfig } from '@/entities/simulation/useGeminiConfig';
 import { loadChatHistory, saveChatHistory, saveErrorBank } from '@/entities/simulation/api';
 import { askGemini, buildGeminiHistory } from '@/entities/simulation/gemini';

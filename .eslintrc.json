@@ -1,0 +1,37 @@
+{
+  "extends": "next/core-web-vitals",
+  "plugins": ["boundaries"],
+  "settings": {
+    "boundaries/elements": [
+      { "type": "app", "pattern": "src/app/**/*" },
+      { "type": "features", "pattern": "src/features/*", "mode": "folder" },
+      { "type": "entities", "pattern": "src/entities/*", "mode": "folder" },
+      { "type": "shared", "pattern": "src/shared/**/*" },
+      { "type": "context", "pattern": "src/context/**/*" },
+      { "type": "components", "pattern": "src/components/**/*" },
+      { "type": "utils", "pattern": "src/utils/**/*" },
+      { "type": "middleware", "pattern": "src/middleware.ts" },
+      { "type": "setup", "pattern": "src/setupTests.ts" }
+    ],
+    "boundaries/include": ["src/**/*"]
+  },
+  "rules": {
+    "boundaries/element-types": [
+      "error",
+      {
+        "default": "disallow",
+        "rules": [
+          { "from": "app",        "allow": ["app", "features", "entities", "shared", "context", "components", "utils"] },
+          { "from": "features",   "allow": ["features", "entities", "shared", "context", "components", "utils"] },
+          { "from": "entities",   "allow": ["entities", "shared", "context", "utils"] },
+          { "from": "shared",     "allow": ["shared", "utils"] },
+          { "from": "context",    "allow": ["context", "shared", "utils"] },
+          { "from": "components", "allow": ["components", "features", "entities", "shared", "context", "utils"] },
+          { "from": "utils",      "allow": ["utils"] },
+          { "from": "middleware", "allow": ["utils", "shared"] },
+          { "from": "setup",      "allow": ["setup", "shared", "utils"] }
+        ]
+      }
+    ]
+  }
+}

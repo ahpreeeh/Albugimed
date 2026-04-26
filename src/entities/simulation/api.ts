@@ -1,6 +1,6 @@
 import { userDataRepository } from '@/shared/api/userDataRepository';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
-import { validateChatMessages, validateErrorBank } from '@/shared/lib/validators';
+import { validateChatMessages, validateErrorBank } from './validators';
 import type { ChatMessage, ErrorEntry } from './types';
 
 const ERROR_BANK_KEY = STORAGE_KEYS.simulation.errorBank;
