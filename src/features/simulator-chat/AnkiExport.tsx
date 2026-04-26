@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useCloudStorage } from "@/hooks/useCloudStorage";
 import { CheckCircle2, Download, Sparkles, ArrowLeft } from "lucide-react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { cn } from "@/shared/lib/cn";
-import type { ErrorEntry, Flashcard } from "@/types";
+import { askGemini } from "@/entities/simulation/gemini";
+import { useErrorBank } from "@/entities/simulation/hooks";
 import { useGeminiConfig } from "@/hooks/useGeminiConfig";
+import { cn } from "@/shared/lib/cn";
+import type { Flashcard } from "@/entities/simulation/types";
 
-// --- COPIE FIDÈLE ---
 const ANKI_SYSTEM_PROMPT = `
 TÂCHE : Transforme cette liste d'erreurs médicales en Flashcards Anki.
 FORMAT SORTIE ATTENDU : Une liste JSON strictement valide d'objets : [{ "question": "...", "reponse": "..." }]
@@ -24,7 +23,7 @@ interface AnkiExportProps {
 }
 
 export const AnkiExport = ({ onBack }: AnkiExportProps) => {
-    const { data: errors, save: saveErrors } = useCloudStorage<ErrorEntry[]>('med-pilot-error-bank', []);
+    const { errors, save: saveErrors } = useErrorBank();
     const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [selectedErrorIds, setSelectedErrorIds] = useState<Set<string>>(new Set());
@@ -46,7 +45,6 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
         else setSelectedErrorIds(new Set(errors.map(e => e.id)));
     };
 
-    // --- COPIE FIDÈLE de la logique Gemini ---
     const handleGenerate = async (targetIds: string[]) => {
         if (targetIds.length === 0) return;
         if (!apiKey) { alert("Configurez votre clé API dans le Simulateur d'abord."); return; }
@@ -55,19 +53,17 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
         setCurrentBatchIds(targetIds);
 
         try {
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const modelInstance = genAI.getGenerativeModel({
-                model: modelId || "gemini-2.5-flash",
-                systemInstruction: ANKI_SYSTEM_PROMPT,
-            });
-
             const targetErrors = errors.filter(e => targetIds.includes(e.id));
             const errorsText = targetErrors
                 .map(e => `- Matière: ${e.matiere}\n- Contexte: ${e.question}\n- Erreur: ${e.erreur_commise}\n- Correction: ${e.correction}`)
                 .join("\n\n");
 
-            const result = await modelInstance.generateContent(`Voici les erreurs à convertir :\n\n${errorsText}`);
-            const text = (await result.response).text();
+            const text = await askGemini({
+                apiKey,
+                modelId: modelId || "gemini-2.5-flash",
+                prompt: `Voici les erreurs à convertir :\n\n${errorsText}`,
+                systemInstruction: ANKI_SYSTEM_PROMPT,
+            });
 
             const jsonMatch = text.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
@@ -106,7 +102,6 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
         setSelectedErrorIds(new Set());
     };
 
-    // --- Flashcard preview state ---
     if (flashcards.length > 0) {
         return (
             <div className="flex flex-col h-full overflow-hidden">
@@ -138,10 +133,8 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
         );
     }
 
-    // --- Main list ---
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            {/* Header */}
             <div className="flex items-center justify-between border-b border-[var(--color-border-default)] px-5 py-4">
                 <div className="flex items-center gap-2">
                     <button onClick={onBack} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
@@ -158,7 +151,6 @@ export const AnkiExport = ({ onBack }: AnkiExportProps) => {
                 )}
             </div>
 
-            {/* Quick action for new errors */}
             {newErrors.length > 0 && (
                 <div className="border-b border-[var(--color-border-default)] bg-[var(--color-accent-soft)] px-5 py-4 text-center">
                     <p className="text-xs font-medium text-[var(--color-text-primary)]">{newErrors.length} erreur{newErrors.length > 1 ? 's' : ''} non exportée{newErrors.length > 1 ? 's' : ''}</p>

@@ -4,7 +4,7 @@ import React, { useState, useCallback } from "react";
 import { GraduationCap } from "lucide-react";
 import { SimulatorChat } from "@/features/simulator-chat/SimulatorChat";
 import { ErrorPanel } from "@/features/error-panel/ErrorPanel";
-import { AnkiExport } from "@/components/features/simulation/AnkiExport";
+import { AnkiExport } from "@/features/simulator-chat/AnkiExport";
 
 export default function SimulationPage() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
