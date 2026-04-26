@@ -13,7 +13,7 @@ import { Plus, Repeat, Clock, Edit2, Trash2 } from 'lucide-react';
 import { usePlanning } from '@/entities/planning/hooks';
 import type { RecurrentSlot } from '@/entities/planning/types';
 import { RecurrentSlotUtils } from '@/entities/planning/types';
-import { RecurrentSlotDialog } from '@/components/features/plan/RecurrentSlotDialog';
+import { RecurrentSlotDialog } from '@/features/planning-recurrent/RecurrentSlotDialog';
 import { TYPE_COLORS, ACTIVE_BAR_COLORS } from '@/features/planning-grid/styles';
 
 export const RecurrentSlotsList: React.FC = () => {

@@ -20,7 +20,7 @@ import { EdnCountdown } from "@/features/home-widgets/EdnCountdown";
 import { TasksNotes } from "@/features/home-widgets/TasksNotes";
 import { RecentErrors } from "@/features/home-widgets/RecentErrors";
 
-import { WeeklyTracker } from "@/components/features/tracking/WeeklyTracker";
+import { WeeklyTracker } from "@/features/weekly-tracker/WeeklyTracker";
 
 // ——— Quick Actions ———
 const QuickActions = () => {

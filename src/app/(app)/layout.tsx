@@ -18,7 +18,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import TopNav from "@/components/layout/TopNav";
-import { MigrationRunner } from "@/components/features/migration/MigrationRunner";
+import { MigrationRunner } from "@/features/migration-notice/MigrationRunner";
 import { createClient } from "@/utils/supabase/client";
 
 interface AppGroupLayoutProps {
