@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { useSubjects } from "@/entities/subject/hooks";
 import type { Subject } from "@/entities/subject/hooks";
-import { useEvents } from "@/context/EventContext";
-import type { AgendaEvent } from "@/context/EventContext";
+import { useEvents } from "@/entities/event/hooks";
+import type { AgendaEvent } from "@/entities/event/hooks";
 
 import { cn } from "@/shared/lib/cn";
 import type { ActiveStrategy } from "@/entities/strategy/types";

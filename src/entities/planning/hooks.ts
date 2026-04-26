@@ -16,4 +16,4 @@
 // Les consommateurs React passent par cette façade ; seul ce fichier connaît
 // encore le chemin d'implémentation historique du context.
 
-export { usePlanning, PlanningProvider } from '@/context/PlanningContext';
+export { usePlanning, PlanningProvider } from './PlanningContext';

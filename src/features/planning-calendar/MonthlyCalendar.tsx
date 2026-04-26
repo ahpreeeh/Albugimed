@@ -19,7 +19,7 @@ import {
     Sparkles,
 } from 'lucide-react';
 import { usePlanning } from '@/entities/planning/hooks';
-import { useEvents } from '@/context/EventContext';
+import { useEvents } from '@/entities/event/hooks';
 import { parseNLPInput } from '@/entities/planning/model';
 
 interface CalendarItem {

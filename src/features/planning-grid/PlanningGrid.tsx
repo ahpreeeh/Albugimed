@@ -11,7 +11,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePlanning } from '@/entities/planning/hooks';
-import { useEvents } from '@/context/EventContext';
+import { useEvents } from '@/entities/event/hooks';
 import {
     addDays,
     toISODate,

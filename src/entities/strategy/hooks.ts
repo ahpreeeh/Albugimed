@@ -9,4 +9,4 @@
 // Step 2.10 : find-and-replace des 5 consommateurs '@/context/StrategyContext'
 // vers '@/entities/strategy/hooks'.
 
-export { useStrategy, StrategyProvider } from '@/context/StrategyContext';
+export { useStrategy, StrategyProvider } from './StrategyContext';

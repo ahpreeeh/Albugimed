@@ -18,7 +18,7 @@ export {
     ICON_MAP,
     AVAILABLE_ICONS,
     getIconComponent,
-} from '@/context/SubjectContext';
+} from './SubjectContext';
 
 export type {
     Subject,
