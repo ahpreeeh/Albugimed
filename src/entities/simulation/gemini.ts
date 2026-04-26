@@ -111,7 +111,7 @@ export async function askGemini({
 }: AskGeminiOptions): Promise<string> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-        model: modelId || 'gemini-2.0-flash',
+        model: modelId || 'gemini-2.5-flash',
         systemInstruction,
         safetySettings: [
             { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },

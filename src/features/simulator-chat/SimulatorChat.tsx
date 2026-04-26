@@ -158,7 +158,7 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
         try {
             const rawText = await askGemini({
                 apiKey,
-                modelId: cloudModelId || "gemini-2.0-flash",
+                modelId: cloudModelId || "gemini-2.5-flash",
                 prompt: input,
                 history: buildGeminiHistory(messages),
             });
@@ -180,7 +180,7 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
             const errorStr = String((error as Error)?.message || error || '');
             let errorText = "Erreur de connexion à l'IA.";
             if (errorStr.includes('401') || errorStr.includes('403')) errorText += " (Clé API invalide)";
-            else if (errorStr.includes('404')) errorText += ` (Modèle introuvable : « ${localModelId || "gemini-2.0-flash"} »)`;
+            else if (errorStr.includes('404')) errorText += ` (Modèle introuvable : « ${localModelId || "gemini-2.5-flash"} »)`;
             else if (errorStr.includes('429')) errorText += " (Trop de requêtes — Attendez)";
             else if (errorStr.includes('SAFETY') || errorStr.includes('blocked')) errorText += " (Bloqué par filtres de sécurité)";
             else if (errorStr.includes('Failed to fetch') || errorStr.includes('network')) errorText += " (Problème réseau)";
@@ -257,7 +257,7 @@ export const SimulatorChat = ({ onErrorCaptured }: SimulatorChatProps) => {
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)] mb-1 block">Modèle (optionnel)</label>
-                                <input type="text" value={localModelId} onChange={e => setLocalModelId(e.target.value)} className="app-input w-full text-xs" placeholder="gemini-2.0-flash" />
+                                <input type="text" value={localModelId} onChange={e => setLocalModelId(e.target.value)} className="app-input w-full text-xs" placeholder="gemini-2.5-flash" />
                             </div>
                             <button onClick={handleSaveConfig} className="app-btn-primary text-xs w-full">Sauvegarder</button>
                         </>
