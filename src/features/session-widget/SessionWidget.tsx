@@ -19,7 +19,7 @@ import { StrategyModal } from '@/features/strategy-picker/StrategyModal';
 import { DayLoadSelector } from './DayLoadSelector';
 import { DifficultySelector } from './DifficultySelector';
 import { SessionTimer, formatTime, useSessionTimer } from './SessionTimer';
-import { useSessionTimingStorage } from '@/hooks/useSessionTimingStorage';
+import { useSessionTimingStorage } from '@/entities/session-timing/useSessionTimingStorage';
 import type { DayLoad } from '@/entities/strategy/types';
 import type { DifficultyRating } from '@/entities/session/types';
 import { reasonLabel, taskTypeLabel, reasonBadgeClass } from '@/entities/session/types';

@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useSessionTimingStorage } from "@/hooks/useSessionTimingStorage";
+import { useSessionTimingStorage } from "@/entities/session-timing/useSessionTimingStorage";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { getMock, setMock, removeMock, batchGetMock } = vi.hoisted(() => ({

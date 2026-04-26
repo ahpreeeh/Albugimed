@@ -5,7 +5,7 @@ import { Send, RefreshCw, Bot, AlertTriangle, Settings, Maximize2, Minimize2, Lo
 import { cn } from '@/shared/lib/cn';
 import type { ChatMessage, ErrorEntry } from '@/entities/simulation/types';
 import { validateChatMessages, validateErrorBank } from '@/shared/lib/validators';
-import { useGeminiConfig } from '@/hooks/useGeminiConfig';
+import { useGeminiConfig } from '@/entities/simulation/useGeminiConfig';
 import { loadChatHistory, saveChatHistory, saveErrorBank } from '@/entities/simulation/api';
 import { askGemini, buildGeminiHistory } from '@/entities/simulation/gemini';
 import { extractErrorCapture } from '@/entities/simulation/model';

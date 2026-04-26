@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ChevronRight } from "lucide-react";
-import type { ErrorEntry } from "@/types";
+import type { ErrorEntry } from "@/entities/simulation/types";
 
 export const RecentErrors = () => {
     const router = useRouter();

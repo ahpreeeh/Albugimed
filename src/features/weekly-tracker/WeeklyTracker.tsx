@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSubjects } from "@/entities/subject/hooks";
 import { useStrategy } from "@/entities/strategy/hooks";
-import { useSessionTimingStorage } from "@/hooks/useSessionTimingStorage";
+import { useSessionTimingStorage } from "@/entities/session-timing/useSessionTimingStorage";
 import { cn } from "@/shared/lib/cn";
 import {
   calculateWeeklyTrackerSnapshot,

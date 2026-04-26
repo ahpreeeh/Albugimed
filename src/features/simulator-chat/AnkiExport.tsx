@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { CheckCircle2, Download, Sparkles, ArrowLeft } from "lucide-react";
 import { askGemini } from "@/entities/simulation/gemini";
 import { useErrorBank } from "@/entities/simulation/hooks";
-import { useGeminiConfig } from "@/hooks/useGeminiConfig";
+import { useGeminiConfig } from "@/entities/simulation/useGeminiConfig";
 import { cn } from "@/shared/lib/cn";
 import type { Flashcard } from "@/entities/simulation/types";
 
