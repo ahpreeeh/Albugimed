@@ -2,8 +2,8 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-25 (Phase 7 Lot AK code OK)
-**Mise à jour par** : Codex (audit reprise + finalisation semi-autonome)
+**Dernière mise à jour** : 2026-04-26 (Phase 7 code complète — Lots AL + AM + cleanup 1.14)
+**Mise à jour par** : Claude Sonnet 4.6 (suite Codex — finalisation semi-autonome Phase 7)
 
 ---
 
@@ -19,7 +19,7 @@
 | Tag fin Phase 3 | `phase-3-done` sur `69666c7` |
 | Tag fin Phase 4 | `phase-4-done` sur `2ce3d73` |
 | Tag fin Phase 5 | `phase-5-done` sur `b7773c3` |
-| HEAD de la branche refactor | Phase 7 Lot AK code OK — confirmer avec `git log --oneline -10` |
+| HEAD de la branche refactor | Phase 7 **code complète** (AL + AM + 1.14) — `d77c656` |
 | Remote push | **non pushé** — tout est local |
 | Tests | 14 fichiers / **189 tests** / 0 échec |
 | Build Next.js | ✅ OK (11 routes statiques avec `/coming`) |
@@ -32,6 +32,11 @@
 ### Commits sur la branche refactor (du plus récent au plus ancien)
 
 ```
+d77c656 refactor(phase-1): step 1.14 — delete obsolete useCloudStorage.ts
+1bb50a2 refactor(phase-7): step 7.10 — move AnkiExport to features/simulator-chat
+2dce877 refactor(phase-7): step 7.9 — move ErrorPanel to features/error-panel
+ea0ad28 fix(simulation): migrate default model from gemini-2.0-flash to gemini-2.5-flash
+3ee8841 refactor(phase-7): step 7.8 — extract ChatMessageBubble
 645bf2b refactor(phase-7): step 7.7 — migrate SimulatorChat to simulation entity
 1512ad5 refactor(phase-7): step 7.6 — add Simulation entity foundation
 ced901d refactor(phase-7): step 7.5 — wire Strategy picker components
@@ -204,7 +209,7 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochaine action à exécuter — **Smoke simulation groupé, puis Phase 7 Lot AL**
+## 4. Prochaine action à exécuter — **Smoke simulation VITAL (AL + AM) avant Phase 8**
 
 Phase 5 **clôturée** le 2026-04-25 (tag `phase-5-done` sur `b7773c3`). Smoke vital validé : `/planning` fonctionne après suppression de `PlanningView.tsx` et du shim `src/types/planning.ts`.
 
@@ -221,7 +226,15 @@ Phase 7 est avancée jusqu'au **Lot AJ** (`7.7`) : `SimulatorChat` est déplacé
 
 Phase 7 **Lot AK** (`7.8`) est code OK : le rendu d'un message chat est extrait dans `features/simulator-chat/ChatMessageBubble.tsx`, sans changement de logique, de persistance ni de comportement visible attendu.
 
-Prochain lot architectural : **Phase 7 Lot AL** (`7.9`) — déplacer `ErrorPanel` vers `features/error-panel/` et brancher `entities/simulation/api`. Lot sensible modéré car il touche le cahier d'erreurs et la persistance associée ; ne pas enchaîner sans accepter ce risque.
+Phase 7 **Lot AL** (`7.9`) **code OK** (commit `2dce877`) : `ErrorPanel` déplacé vers `features/error-panel/`. Hook `useErrorBank()` ajouté dans `entities/simulation/hooks.ts` (mirror de `useCloudValue` mais branché sur `loadErrorBank/saveErrorBank` de `entities/simulation/api`). `validateErrorBank` retiré de l'import (validation déjà incluse dans `loadErrorBank`).
+
+Phase 7 **Lot AM** (`7.10`) **code OK** (commit `1bb50a2`) : `AnkiExport` déplacé vers `features/simulator-chat/AnkiExport.tsx`. `useCloudStorage` remplacé par `useErrorBank()`. Appel `GoogleGenerativeAI` direct remplacé par `askGemini()` de `entities/simulation/gemini` avec `systemInstruction` custom (`ANKI_SYSTEM_PROMPT`). Dossiers vides `components/features/{simulation,session,subjects}` supprimés.
+
+**Cleanup 1.14 réalisé** (commit `d77c656`) : `src/hooks/useCloudStorage.ts` supprimé — plus aucun consommateur après migration AL + AM.
+
+Fix de bord (commit `ea0ad28`) : modèle Gemini par défaut migré de `gemini-2.0-flash` (déprécié → 429 systématiques) vers `gemini-2.5-flash` (4 emplacements : `gemini.ts`, `SimulatorChat.tsx` ×3, `AnkiExport.tsx`). **Note** : si un utilisateur avait sauvegardé manuellement `gemini-2.0-flash` dans Supabase, il doit aussi mettre à jour la valeur via le panneau de config du chat.
+
+**Phase 7 = code complet (10 lots, 7.1 → 7.10) + cleanup 1.14.** Tag `phase-7-done` en attente du smoke simulation vital.
 
 ### Smoke Phase 6 à accumuler puis valider
 
