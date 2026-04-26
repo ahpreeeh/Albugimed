@@ -2,8 +2,8 @@
 
 > **État réel du refactor.** Document vivant, mis à jour après chaque lot d'étapes validé. Couplé à `REFACTOR_PLAN.md` qui est la référence figée.
 
-**Dernière mise à jour** : 2026-04-26 (Phase 7 code complète — Lots AL + AM + cleanup 1.14)
-**Mise à jour par** : Claude Sonnet 4.6 (suite Codex — finalisation semi-autonome Phase 7)
+**Dernière mise à jour** : 2026-04-26 (Phase 8 code complète — finition + lint boundaries)
+**Mise à jour par** : Claude Sonnet 4.6 (suite Codex — finalisation semi-autonome Phases 7 + 8)
 
 ---
 
@@ -19,7 +19,9 @@
 | Tag fin Phase 3 | `phase-3-done` sur `69666c7` |
 | Tag fin Phase 4 | `phase-4-done` sur `2ce3d73` |
 | Tag fin Phase 5 | `phase-5-done` sur `b7773c3` |
-| HEAD de la branche refactor | Phase 7 **code complète** (AL + AM + 1.14) — `d77c656` |
+| Tag fin Phase 7 | `phase-7-done` sur `02af2f7` |
+| Tag fin Phase 8 | `phase-8-done` sur `265f10e` |
+| HEAD de la branche refactor | **Phase 8 code complète** — `265f10e` |
 | Remote push | **non pushé** — tout est local |
 | Tests | 14 fichiers / **189 tests** / 0 échec |
 | Build Next.js | ✅ OK (11 routes statiques avec `/coming`) |
@@ -209,7 +211,7 @@ Voir `REFACTOR_PLAN.md` §4 pour le détail. En bref :
 
 ---
 
-## 4. Prochaine action à exécuter — **Smoke simulation VITAL (AL + AM) avant Phase 8**
+## 4. Prochaine action à exécuter — **Smoke final VITAL avant merge sur main**
 
 Phase 5 **clôturée** le 2026-04-25 (tag `phase-5-done` sur `b7773c3`). Smoke vital validé : `/planning` fonctionne après suppression de `PlanningView.tsx` et du shim `src/types/planning.ts`.
 
@@ -234,7 +236,32 @@ Phase 7 **Lot AM** (`7.10`) **code OK** (commit `1bb50a2`) : `AnkiExport` dépla
 
 Fix de bord (commit `ea0ad28`) : modèle Gemini par défaut migré de `gemini-2.0-flash` (déprécié → 429 systématiques) vers `gemini-2.5-flash` (4 emplacements : `gemini.ts`, `SimulatorChat.tsx` ×3, `AnkiExport.tsx`). **Note** : si un utilisateur avait sauvegardé manuellement `gemini-2.0-flash` dans Supabase, il doit aussi mettre à jour la valeur via le panneau de config du chat.
 
-**Phase 7 = code complet (10 lots, 7.1 → 7.10) + cleanup 1.14.** Tag `phase-7-done` en attente du smoke simulation vital.
+**Phase 7 = code complet (10 lots, 7.1 → 7.10) + cleanup 1.14.** Tag `phase-7-done` posé sur `02af2f7` après smoke test simulation vital validé 2026-04-26.
+
+### Phase 8 — Finition (terminée 2026-04-26)
+
+| Step | Statut | Notes |
+|---|---|---|
+| 8.1 colocate Context providers | ✅ `375822c` | `EventContext`, `PlanningContext`, `StrategyContext`, `SubjectContext` déplacés dans leur entity respective. `entities/event/hooks.ts` ajouté. `src/context/` ne contient plus que `ThemeContext.tsx`. |
+| 8.2 delete `src/components/views/` | ✅ `3b75ef1` | Folder ne contenait qu'un `__tests__/` vide. |
+| 8.3 delete `src/components/features/` | ✅ `3b75ef1` | 3 retardataires migrés : `MigrationRunner` → `features/migration-notice/`, `RecurrentSlotDialog` → `features/planning-recurrent/`, `WeeklyTracker` (+ utils + tests) → `features/weekly-tracker/`. |
+| 8.4 delete `src/types/` + `src/hooks/` | ✅ `8d44971` | `types/index.ts` supprimé (re-exports + 2 unused). 3 hooks colocalisés : `useSessionTimingStorage` → `entities/session-timing/`, `useGeminiConfig` → `entities/simulation/`, `useMigration` → `features/migration-notice/`. |
+| 8.5 eslint-plugin-boundaries | ✅ `265f10e` | Plugin installé + `.eslintrc.json` configuré avec règles 4 couches. Violations corrigées : `MedicalIcons` → `shared/icons/`, `validateChatMessages`/`validateErrorBank` extraits vers `entities/simulation/validators.ts`, `components → features` autorisé pour app-shell, 3 apostrophes échappées dans `login/page.tsx`. `npm run lint` clean. |
+| 8.6 ARCHITECTURE.md | ✅ `e959615` | Doc 4 couches, règles d'import, anatomie d'une entity, templates pour widget/route/entity, pattern `userDataRepository`, stratégie tests. |
+
+### Smoke final VITAL (avant merge `main`)
+
+À faire pour valider la totalité du refactor :
+
+1. Login frais avec un compte de test
+2. **Cockpit** : compte à rebours EDN, stats, Quick Tasks/Notes, RecentErrors, WeeklyTracker, SessionWidget (démarrer + terminer une tâche)
+3. **Planning** : 3 modes (grid/calendrier/récurrent), création d'un événement, drag/drop, NLP quick-add
+4. **Subjects** : ajouter un sujet, ouvrir un détail, modifier la progression
+5. **Simulation** : démarrer un DP, capturer une erreur, panneau d'erreurs (filtres/edit/delete), Anki export → CSV download
+6. **Theme** : changer de thème, persistance après reload
+7. **Migration** : si bannière s'affiche pour un compte localStorage → cliquer + vérifier transfert Supabase
+
+Si tout passe : tag `refactor-v2-complete` puis merge sur `main` (déclenche déploiement Vercel).
 
 ### Smoke Phase 6 à accumuler puis valider
 
