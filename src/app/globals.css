@@ -519,6 +519,11 @@ html[data-theme="blush-lavender"] {
 
   .app-modal-panel {
     width: 100%;
+    /* Garde la modale dans la viewport même quand son contenu est haut.
+       Avant ce cap : centrage vertical → top dépassait au-dessus du
+       viewport et passait sous la TopNav (cf. RecurrentSlotDialog). */
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
     border: 1px solid var(--color-border);
     border-radius: 16px;
     background: var(--color-bg-card);

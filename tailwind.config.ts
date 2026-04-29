@@ -5,6 +5,9 @@ const config: Config = {
         "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
         "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
         "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+        // Phase 2+ (FSD architecture) : entities et features ont leur JSX/Tailwind
+        "./src/features/**/*.{js,ts,jsx,tsx,mdx}",
+        "./src/entities/**/*.{js,ts,jsx,tsx,mdx}",
     ],
     theme: {
         extend: {

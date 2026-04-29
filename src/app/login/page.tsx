@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { Activity, Mail, Lock, ArrowRight, Check } from 'lucide-react';
 import { login, signup } from './actions';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/cn';
 
 export default function LoginPage() {
     // Mode d'affichage : "login" ou "signup"
@@ -40,7 +40,7 @@ export default function LoginPage() {
                     </div>
                     <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">AlbugiMed OS</h1>
                     <p className="text-sm text-[var(--color-text-muted)] mt-1 text-center">
-                        La plateforme de productivité et de révision pour l'EDN.
+                        La plateforme de productivité et de révision pour l&apos;EDN.
                     </p>
                 </div>
 
@@ -155,7 +155,7 @@ export default function LoginPage() {
                 
                 {mode === 'login' && (
                     <p className="text-center text-xs text-[var(--color-text-hint)] mt-6">
-                       Si vous n'avez pas de compte, basculez l'onglet ci-dessus !
+                       Si vous n&apos;avez pas de compte, basculez l&apos;onglet ci-dessus !
                     </p>
                 )}
             </div>

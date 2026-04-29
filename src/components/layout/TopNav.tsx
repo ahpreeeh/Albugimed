@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { useView, ViewType } from "@/context/ViewContext";
-import { StrategyModal } from "@/components/features/session/StrategyModal";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { StrategyModal } from "@/features/strategy-picker/StrategyModal";
 import { ThemeSettingsPanel } from "@/components/layout/ThemeSettingsPanel";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import {
     Stethoscope,
     LayoutGrid,
@@ -17,17 +18,19 @@ import {
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────
-const navItems: { id: ViewType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: "cockpit",    label: "Aujourd'hui", icon: LayoutGrid },
-    { id: "subjects",   label: "Matières",    icon: BookOpen },
-    { id: "simulation", label: "Simulation",  icon: GraduationCap },
-    { id: "planning",   label: "Planning",    icon: Calendar },
-    { id: "coming",     label: "À venir",     icon: Sparkles },
+// Phase 4 step 4.5 : items utilisent maintenant des paths Next.js réels.
+// Les anciens id ViewType ont disparu avec ViewContext (Lot V).
+const navItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { href: "/cockpit",    label: "Aujourd'hui", icon: LayoutGrid },
+    { href: "/subjects",   label: "Matières",    icon: BookOpen },
+    { href: "/simulation", label: "Simulation",  icon: GraduationCap },
+    { href: "/planning",   label: "Planning",    icon: Calendar },
+    { href: "/coming",     label: "À venir",     icon: Sparkles },
 ];
 
 // ─── Top Navigation Bar ───────────────────────────────────────────────
 const TopNav = () => {
-    const { activeView, setActiveView } = useView();
+    const pathname = usePathname();
     const [strategieOpen, setStrategieOpen] = useState(false);
     const [isThemePanelOpen, setIsThemePanelOpen] = useState(false);
 
@@ -56,11 +59,12 @@ const TopNav = () => {
                         {/* ── Center: Nav items ── */}
                         <div className="flex items-center gap-0.5">
                             {navItems.map((item) => {
-                                const isActive = activeView === item.id;
+                                const isActive = pathname === item.href;
                                 return (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => setActiveView(item.id)}
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        data-active={isActive || undefined}
                                         className={cn(
                                             "flex items-center gap-1.5 rounded-md px-2.5 sm:px-3.5 py-2 text-[13px] font-medium transition-all duration-150",
                                             isActive
@@ -70,7 +74,7 @@ const TopNav = () => {
                                     >
                                         <item.icon className="h-3.5 w-3.5" />
                                         <span className="hidden sm:inline">{item.label}</span>
-                                    </button>
+                                    </Link>
                                 );
                             })}
                         </div>

@@ -56,9 +56,10 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isLoginPage) {
-    // Connecté -> redirection vers le dashboard
+    // Connecté -> redirection directe vers /cockpit (évite le double-hop
+    // /login → / → /cockpit depuis Phase 4 step 4.4)
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = '/cockpit';
     return NextResponse.redirect(url);
   }
 
