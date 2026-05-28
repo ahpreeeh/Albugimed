@@ -10,6 +10,7 @@ import {
     Stethoscope,
     LayoutGrid,
     BookOpen,
+    FileText,
     GraduationCap,
     Calendar,
     Settings2,
@@ -23,6 +24,7 @@ import {
 const navItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { href: "/cockpit",    label: "Aujourd'hui", icon: LayoutGrid },
     { href: "/subjects",   label: "Matières",    icon: BookOpen },
+    { href: "/notes",      label: "Notes",        icon: FileText },
     { href: "/simulation", label: "Simulation",  icon: GraduationCap },
     { href: "/planning",   label: "Planning",    icon: Calendar },
     { href: "/coming",     label: "À venir",     icon: Sparkles },

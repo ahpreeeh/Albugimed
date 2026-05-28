@@ -26,6 +26,9 @@ export const STORAGE_KEYS = {
     quickTasks: "med-pilot-quick-tasks",
     quickNotes: "med-pilot-quick-notes",
   },
+  notes: {
+    workspace: "albugimed-notes-workspace-v1",
+  },
   chat: {
     history: "dp_chat_history",
     lastMessageTime: "dp_last_message_time",

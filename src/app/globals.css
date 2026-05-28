@@ -538,6 +538,133 @@ html[data-theme="blush-lavender"] {
     font-weight: 500;
     letter-spacing: 0.04em;
   }
+
+  .editor-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    color: var(--color-text-muted);
+    transition:
+      color 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .editor-tool:hover {
+    color: var(--color-accent);
+    background: var(--color-accent-soft);
+  }
+
+  /* ── contentEditable note body ─────────────────────────────── */
+  .notes-editor {
+    outline: none;
+    line-height: 1.75;
+    color: var(--color-text-primary);
+  }
+
+  .notes-editor h1,
+  .notes-editor h2,
+  .notes-editor h3 {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    margin: 1em 0 0.4em;
+  }
+
+  .notes-editor h1 { font-size: 1.35em; }
+  .notes-editor h2 { font-size: 1.15em; }
+  .notes-editor h3 { font-size: 1em; }
+
+  .notes-editor p { margin: 0.4em 0; }
+
+  .notes-editor ul,
+  .notes-editor ol {
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+  }
+
+  .notes-editor li { margin: 0.2em 0; }
+
+  .notes-editor blockquote {
+    border-left: 3px solid var(--color-accent);
+    margin: 0.75em 0;
+    padding: 0.25em 0 0.25em 1em;
+    color: var(--color-text-secondary);
+    font-style: italic;
+  }
+
+  .notes-editor code {
+    font-family: var(--font-mono), monospace;
+    font-size: 0.85em;
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+
+  .notes-editor pre {
+    font-family: var(--font-mono), monospace;
+    font-size: 0.85em;
+    background: var(--color-accent-soft);
+    color: var(--color-text-secondary);
+    padding: 0.75em 1em;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 0.75em 0;
+  }
+
+  .notes-editor a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .notes-editor strong { font-weight: 600; }
+  .notes-editor em { font-style: italic; }
+  .notes-editor u { text-decoration: underline; text-underline-offset: 2px; }
+  .notes-editor s { text-decoration: line-through; }
+
+  .notes-editor:empty::before,
+  .notes-editor:has(br:only-child)::before {
+    content: attr(data-placeholder);
+    color: var(--color-text-muted);
+    pointer-events: none;
+    display: block;
+  }
+
+  /* ── Notes layout helpers ─────────────────────────────────── */
+  .notes-shell {
+    margin: -1.5rem -1.25rem;
+    height: calc(100vh - 52px);
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--color-bg-page);
+    border-top: 1px solid var(--color-border-default);
+    border-bottom: 1px solid var(--color-border-default);
+  }
+
+  @media (min-width: 640px) {
+    .notes-shell { margin-left: -1.5rem; margin-right: -1.5rem; }
+  }
+
+  @media (min-width: 1024px) {
+    .notes-shell { margin: -1.75rem -2rem; }
+  }
+
+  .notes-card {
+    transition:
+      box-shadow 160ms ease,
+      border-color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .notes-card:hover {
+    box-shadow: 0 4px 16px rgba(91, 127, 166, 0.12);
+    border-color: var(--color-border-active);
+    transform: translateY(-1px);
+  }
 }
 
 @layer utilities {
