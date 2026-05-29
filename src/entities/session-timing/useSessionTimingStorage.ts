@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { userDataRepository } from "@/shared/api/userDataRepository";
+import { loadKey } from "@/shared/api/cloudBatchLoader";
 import {
   areSessionTimingEntriesEqual,
   mergeSessionTimingEntries,
@@ -97,7 +98,7 @@ export function useSessionTimingStorage(): SessionTimingStorageResult {
       const localEntries = readLocalEntries();
 
       try {
-        const cloudValue = await userDataRepository.get<SessionTimingEntry[]>(STORAGE_KEY);
+        const cloudValue = await loadKey<SessionTimingEntry[]>(STORAGE_KEY);
 
         // Pas de valeur cloud (user non connecté ou clé absente) : on reste sur le local.
         if (cloudValue === null) {

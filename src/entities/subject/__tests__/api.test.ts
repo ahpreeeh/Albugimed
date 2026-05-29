@@ -2,11 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Subject } from '../types';
 
 // ── Mock userDataRepository ─────────────────────────────────────────
-const { getMock, setMock, removeMock, batchGetMock } = vi.hoisted(() => ({
+const { getMock, setMock, removeMock, batchGetMock, loadKeyMock } = vi.hoisted(() => ({
     getMock: vi.fn(),
     setMock: vi.fn(),
     removeMock: vi.fn(),
     batchGetMock: vi.fn(),
+    loadKeyMock: vi.fn(),
 }));
 
 vi.mock('@/shared/api/userDataRepository', () => ({
@@ -16,6 +17,10 @@ vi.mock('@/shared/api/userDataRepository', () => ({
         remove: removeMock,
         batchGet: batchGetMock,
     },
+}));
+
+vi.mock('@/shared/api/cloudBatchLoader', () => ({
+    loadKey: loadKeyMock,
 }));
 
 // Import AFTER mock setup
@@ -52,6 +57,7 @@ function makeSubject(id: string, title = 'Cardio'): Subject {
 describe('entities/subject/api — loadSubjects', () => {
     beforeEach(() => {
         getMock.mockReset();
+        loadKeyMock.mockReset();
         setMock.mockReset();
     });
 
@@ -60,15 +66,15 @@ describe('entities/subject/api — loadSubjects', () => {
     });
 
     it('retourne null quand userDataRepository ne trouve pas la clé', async () => {
-        getMock.mockResolvedValue(null);
+        loadKeyMock.mockResolvedValue(null);
 
         await expect(loadSubjects()).resolves.toBeNull();
-        expect(getMock).toHaveBeenCalledWith('med-pilot-subjects-v4');
+        expect(loadKeyMock).toHaveBeenCalledWith('med-pilot-subjects-v4');
     });
 
     it('retourne un tableau validé quand la valeur cloud existe (round-trip)', async () => {
         const subjects = [makeSubject('s1'), makeSubject('s2', 'Neuro')];
-        getMock.mockResolvedValue(subjects);
+        loadKeyMock.mockResolvedValue(subjects);
 
         const result = await loadSubjects();
         expect(result).not.toBeNull();
@@ -78,7 +84,7 @@ describe('entities/subject/api — loadSubjects', () => {
     });
 
     it('filtre les entrées invalides via validateSubjects (tolérant)', async () => {
-        getMock.mockResolvedValue([
+        loadKeyMock.mockResolvedValue([
             makeSubject('ok'),
             { id: 'broken', title: 42 }, // title non-string → rejeté
             null,                         // entrée nulle → rejetée

@@ -6,6 +6,7 @@
 // (câblage = step 3.7 / Lot Q, flip-switch avec smoke obligatoire).
 
 import { userDataRepository } from '@/shared/api/userDataRepository';
+import { loadKey } from '@/shared/api/cloudBatchLoader';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import type { DailySession, SessionHistoryEntry } from './types';
 
@@ -27,7 +28,7 @@ export const SESSION_HISTORY_MAX = 500;
  *   de la persistance.
  */
 export async function loadDailySession(): Promise<DailySession | null> {
-    return userDataRepository.get<DailySession>(SESSION_KEY);
+    return loadKey<DailySession>(SESSION_KEY);
 }
 
 /**
@@ -54,7 +55,7 @@ export async function clearDailySession(): Promise<void> {
  * consommateurs.
  */
 export async function loadSessionHistory(): Promise<SessionHistoryEntry[]> {
-    const raw = await userDataRepository.get<SessionHistoryEntry[]>(HISTORY_KEY);
+    const raw = await loadKey<SessionHistoryEntry[]>(HISTORY_KEY);
     return Array.isArray(raw) ? raw : [];
 }
 

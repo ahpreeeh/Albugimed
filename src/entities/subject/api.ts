@@ -4,6 +4,7 @@
 // Dormant en step 2.3 : pas encore câblé à SubjectContext (câblage = step 2.4 / Lot H).
 
 import { userDataRepository } from '@/shared/api/userDataRepository';
+import { loadKey } from '@/shared/api/cloudBatchLoader';
 import { validateSubjects } from '@/shared/lib/validators';
 import { STORAGE_KEYS } from '@/shared/config/storageKeys';
 import type { Subject } from './types';
@@ -19,7 +20,7 @@ const SUBJECTS_KEY = STORAGE_KEYS.subjects.list;
  *   entrées corrompues, tolère les anciens formats).
  */
 export async function loadSubjects(): Promise<Subject[] | null> {
-    const raw = await userDataRepository.get<unknown>(SUBJECTS_KEY);
+    const raw = await loadKey<unknown>(SUBJECTS_KEY);
     if (raw === null) {
         return null;
     }

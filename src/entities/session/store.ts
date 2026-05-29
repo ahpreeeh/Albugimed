@@ -182,9 +182,13 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
             set({ session: local });
         }
 
+        // Start both reads before awaiting so the batch loader can coalesce them.
+        const cloudSessionPromise = loadDailySession();
+        const historyPromise = loadSessionHistory();
+
         // Cloud override (authoritative)
         try {
-            const cloudSession = await loadDailySession();
+            const cloudSession = await cloudSessionPromise;
             if (isCurrentDaySession(cloudSession, today)) {
                 nextSession = cloudSession;
                 set({ session: cloudSession });
@@ -196,7 +200,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
         // Load history (no date filter — history spans many days)
         try {
-            const history = await loadSessionHistory();
+            const history = await historyPromise;
             set({ history });
         } catch (err) {
             console.warn('[sessionStore] loadSessionHistory failed', err);

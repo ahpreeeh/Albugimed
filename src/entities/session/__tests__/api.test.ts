@@ -5,11 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DailySession, SessionHistoryEntry } from '../types';
 
 // ─── Mock userDataRepository ──────────────────────────────────────────
-const { getMock, setMock, removeMock, batchGetMock } = vi.hoisted(() => ({
+const { getMock, setMock, removeMock, batchGetMock, loadKeyMock } = vi.hoisted(() => ({
     getMock: vi.fn(),
     setMock: vi.fn(),
     removeMock: vi.fn(),
     batchGetMock: vi.fn(),
+    loadKeyMock: vi.fn(),
 }));
 
 vi.mock('@/shared/api/userDataRepository', () => ({
@@ -19,6 +20,10 @@ vi.mock('@/shared/api/userDataRepository', () => ({
         remove: removeMock,
         batchGet: batchGetMock,
     },
+}));
+
+vi.mock('@/shared/api/cloudBatchLoader', () => ({
+    loadKey: loadKeyMock,
 }));
 
 // Import AFTER mock setup
@@ -60,6 +65,7 @@ function makeHistoryEntry(overrides: Partial<SessionHistoryEntry> = {}): Session
 describe('loadDailySession', () => {
     beforeEach(() => {
         getMock.mockReset();
+        loadKeyMock.mockReset();
     });
 
     afterEach(() => {
@@ -67,15 +73,15 @@ describe('loadDailySession', () => {
     });
 
     it('retourne null quand userDataRepository n\'a pas la clé', async () => {
-        getMock.mockResolvedValue(null);
+        loadKeyMock.mockResolvedValue(null);
         await expect(loadDailySession()).resolves.toBeNull();
-        expect(getMock).toHaveBeenCalledWith('med-pilot-daily-session');
+        expect(loadKeyMock).toHaveBeenCalledWith('med-pilot-daily-session');
     });
 
     it('retourne la valeur cloud brute sans filtrage de date', async () => {
         // Session "d'hier" : l'api la retourne, filtrage = responsabilité caller
         const stale = makeSession('2026-04-19');
-        getMock.mockResolvedValue(stale);
+        loadKeyMock.mockResolvedValue(stale);
         await expect(loadDailySession()).resolves.toEqual(stale);
     });
 });
@@ -116,22 +122,23 @@ describe('clearDailySession', () => {
 describe('loadSessionHistory', () => {
     beforeEach(() => {
         getMock.mockReset();
+        loadKeyMock.mockReset();
     });
 
     it('retourne [] si aucune valeur cloud', async () => {
-        getMock.mockResolvedValue(null);
+        loadKeyMock.mockResolvedValue(null);
         await expect(loadSessionHistory()).resolves.toEqual([]);
-        expect(getMock).toHaveBeenCalledWith('med-pilot-session-history');
+        expect(loadKeyMock).toHaveBeenCalledWith('med-pilot-session-history');
     });
 
     it('retourne [] si le format stocké n\'est pas un tableau (défensif)', async () => {
-        getMock.mockResolvedValue({ corrupted: true });
+        loadKeyMock.mockResolvedValue({ corrupted: true });
         await expect(loadSessionHistory()).resolves.toEqual([]);
     });
 
     it('retourne le tableau cloud tel quel quand il est valide', async () => {
         const history = [makeHistoryEntry(), makeHistoryEntry({ difficultyRating: 'red' })];
-        getMock.mockResolvedValue(history);
+        loadKeyMock.mockResolvedValue(history);
 
         const result = await loadSessionHistory();
         expect(result).toHaveLength(2);

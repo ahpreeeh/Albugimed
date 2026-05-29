@@ -18,6 +18,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import TopNav from "@/components/layout/TopNav";
+import { AppProviders } from "@/app/providers";
 import { MigrationRunner } from "@/features/migration-notice/MigrationRunner";
 import { createClient } from "@/utils/supabase/client";
 
@@ -43,6 +44,7 @@ export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
     }, []);
 
     return (
+        <AppProviders>
         <div className="theme-medpilot app-shell relative w-full min-h-screen flex flex-col">
             {/* Top navigation bar */}
             <TopNav />
@@ -65,5 +67,6 @@ export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
             {/* Migration localStorage → Supabase (s'exécute une seule fois après login) */}
             {userId && <MigrationRunner userId={userId} />}
         </div>
+        </AppProviders>
     );
 }

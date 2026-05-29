@@ -4,11 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { useSessionTimingStorage } from "@/entities/session-timing/useSessionTimingStorage";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getMock, setMock, removeMock, batchGetMock } = vi.hoisted(() => ({
+const { getMock, setMock, removeMock, batchGetMock, loadKeyMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   setMock: vi.fn(),
   removeMock: vi.fn(),
   batchGetMock: vi.fn(),
+  loadKeyMock: vi.fn(),
 }));
 
 vi.mock("@/shared/api/userDataRepository", () => ({
@@ -18,6 +19,10 @@ vi.mock("@/shared/api/userDataRepository", () => ({
     remove: removeMock,
     batchGet: batchGetMock,
   },
+}));
+
+vi.mock("@/shared/api/cloudBatchLoader", () => ({
+  loadKey: loadKeyMock,
 }));
 
 function makeEntry(id: string, chapterId: string, date: string) {
@@ -65,6 +70,7 @@ describe("useSessionTimingStorage", () => {
   beforeEach(() => {
     localStorage.clear();
     getMock.mockResolvedValue(null);
+    loadKeyMock.mockResolvedValue(null);
     setMock.mockResolvedValue(undefined);
     removeMock.mockResolvedValue(undefined);
     batchGetMock.mockResolvedValue({});
@@ -98,7 +104,7 @@ describe("useSessionTimingStorage", () => {
       "med-pilot-session-timing",
       JSON.stringify([makeEntry("task-1", "chapter-1", "2026-04-01")]),
     );
-    getMock.mockResolvedValue([makeEntry("task-2", "chapter-2", "2026-04-02")]);
+    loadKeyMock.mockResolvedValue([makeEntry("task-2", "chapter-2", "2026-04-02")]);
 
     render(<Probe name="merged" />);
 
