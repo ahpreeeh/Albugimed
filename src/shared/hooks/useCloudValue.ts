@@ -17,6 +17,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { userDataRepository } from "@/shared/api/userDataRepository";
+import { loadKey } from "@/shared/api/cloudBatchLoader";
 
 export interface CloudValueResult<T> {
   data: T;
@@ -51,7 +52,9 @@ export function useCloudValue<T>(
 
     async function fetchFromCloud() {
       try {
-        const cloudValue = await userDataRepository.get<T>(key);
+        // Use the batch loader so concurrent useCloudValue mounts share a
+        // single Supabase round-trip per microtask tick (cf. cloudBatchLoader).
+        const cloudValue = await loadKey<T>(key);
         if (!cancelled && cloudValue !== null && cloudValue !== undefined) {
           setData(cloudValue);
           localStorage.setItem(key, JSON.stringify(cloudValue));
