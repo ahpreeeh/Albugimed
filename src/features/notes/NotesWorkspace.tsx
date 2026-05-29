@@ -1349,7 +1349,6 @@ export function NoteEditorWorkspace({ noteId }: NoteEditorWorkspaceProps) {
           contentEditable
           suppressContentEditableWarning
           onInput={handleEditorInput}
-          data-placeholder="Commencez à écrire…"
           className="notes-editor min-h-full px-8 py-5"
           style={{ fontSize: "0.92rem", minHeight: "300px" }}
         />
