@@ -540,9 +540,10 @@ interface NoteCardProps {
   note: Note;
   notebook?: Notebook;
   tags: NoteTag[];
+  onDelete: () => void;
 }
 
-function NoteCard({ note, notebook, tags }: NoteCardProps) {
+function NoteCard({ note, notebook, tags, onDelete }: NoteCardProps) {
   const preview = stripHtml(note.content);
   const noteTags = note.tags
     .slice(0, 3)
@@ -552,13 +553,30 @@ function NoteCard({ note, notebook, tags }: NoteCardProps) {
   return (
     <Link
       href={`/notes/${note.id}`}
-      className="notes-card group flex flex-col overflow-hidden rounded-xl text-left"
+      className="notes-card group relative flex flex-col overflow-hidden rounded-xl text-left"
       style={{
         background: "var(--color-bg-card)",
         border: "1px solid var(--color-border-default)",
         boxShadow: "0 1px 3px rgba(26,37,53,.04)",
       }}
     >
+      <button
+        type="button"
+        onClick={(event) => {
+          // Inside a <Link> — block navigation, then confirm + delete.
+          event.preventDefault();
+          event.stopPropagation();
+          if (window.confirm(`Supprimer "${getDisplayTitle(note)}" ?`)) {
+            onDelete();
+          }
+        }}
+        title="Supprimer la note"
+        aria-label="Supprimer la note"
+        className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-card)] text-[var(--color-text-muted)] opacity-0 shadow-sm transition-all hover:border-[var(--color-danger)] hover:!bg-[var(--color-danger-muted)] hover:text-[var(--color-danger)] focus-visible:opacity-100 group-hover:opacity-100"
+      >
+        <Trash2 size={13} strokeWidth={1.8} />
+      </button>
+
       <div
         className="h-1 w-full shrink-0"
         style={{ background: notebook?.color ?? "var(--color-border-default)" }}
@@ -762,7 +780,7 @@ function useNotesActions() {
 // ────────────────────────────────────────────────────────────────
 
 export function NotesWorkspace() {
-  const { workspace, createNote, createNotebook } = useNotesActions();
+  const { workspace, createNote, createNotebook, deleteNote } = useNotesActions();
   const [activeFilter, setActiveFilter] = useState<NoteFilter>({ type: "all" });
   const [search, setSearch] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -947,6 +965,7 @@ export function NotesWorkspace() {
                     (notebook) => notebook.id === note.notebookId,
                   )}
                   tags={workspace.tags}
+                  onDelete={() => deleteNote(note.id)}
                 />
               ))}
             </div>
