@@ -1,7 +1,7 @@
 // ─── App Providers ────────────────────────────────────────────────────
-// Phase 4 step 4.7 : tous les providers métier de l'app, instanciés
-// **une seule fois** dans le RootLayout. Stores conservés entre les
-// navigations entre routes — pas de démontage/remontage.
+// Providers métier de l'app authentifiée. Ils doivent rester hors RootLayout
+// pour ne pas s'initialiser sur /login avant que la session Supabase existe.
+// Stores conservés entre les navigations internes au groupe `(app)/`.
 //
 // Chaîne de providers (ordre conservé depuis l'ancien LayoutShell) :
 //   SubjectProvider > EventProvider > PlanningProvider > StrategyProvider

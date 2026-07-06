@@ -1,5 +1,34 @@
 import { createServerClient } from '@supabase/ssr';
+import type { User } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
+
+const AUTH_LOOKUP_TIMEOUT_MS = 2500;
+
+type AuthLookupResult =
+  | { status: 'ok'; user: User | null }
+  | { status: 'error'; error: unknown }
+  | { status: 'timeout' };
+
+async function getUserWithTimeout(
+  getUser: () => Promise<{ data: { user: User | null }; error: unknown }>,
+): Promise<AuthLookupResult> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const authLookup = getUser()
+    .then(({ data, error }): AuthLookupResult => {
+      if (error) return { status: 'error', error };
+      return { status: 'ok', user: data.user ?? null };
+    })
+    .catch((error): AuthLookupResult => ({ status: 'error', error }));
+
+  const timeout = new Promise<AuthLookupResult>((resolve) => {
+    timeoutId = setTimeout(() => resolve({ status: 'timeout' }), AUTH_LOOKUP_TIMEOUT_MS);
+  });
+
+  const result = await Promise.race([authLookup, timeout]);
+  if (timeoutId) clearTimeout(timeoutId);
+  return result;
+}
 
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,13 +69,27 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // IMPORTANT: Rafraîchir la session d'authentification
-  // Cela appelera setAll() ci-dessus s'il y a un nouveau token généré
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const isLoginPage = request.nextUrl.pathname.startsWith('/login');
+  const authLookup = await getUserWithTimeout(() => supabase.auth.getUser());
+
+  if (authLookup.status === 'timeout') {
+    console.warn('[middleware] Supabase auth.getUser timeout');
+
+    if (isLoginPage) {
+      return supabaseResponse;
+    }
+
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.searchParams.set('auth', 'timeout');
+    return NextResponse.redirect(url);
+  }
+
+  if (authLookup.status === 'error') {
+    console.warn('[middleware] Supabase auth.getUser failed', authLookup.error);
+  }
+
+  const user = authLookup.status === 'ok' ? authLookup.user : null;
 
   if (!user && !isLoginPage) {
     // Anonyme -> redirection vers la page de login

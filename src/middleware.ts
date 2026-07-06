@@ -9,13 +9,14 @@ export async function middleware(request: NextRequest) {
 // Spécifie sur quelles routes le middleware doit s'exécuter
 export const config = {
   matcher: [
-    /*
-     * Intercepte toutes les requêtes sauf pour :
-     * - _next/static (fichiers statiques compilés par Next.js)
-     * - _next/image (images optimisées par le routeur Next.js)
-     * - favicon.ico (icône du site)
-     * - les fichiers avec des extensions (images, graphismes, etc.)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/',
+    '/login',
+    '/cockpit/:path*',
+    '/subjects/:path*',
+    '/planning/:path*',
+    '/simulation/:path*',
+    '/notes/:path*',
+    '/coming/:path*',
+    '/restore/:path*',
   ],
 };

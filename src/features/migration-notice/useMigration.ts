@@ -117,10 +117,48 @@ export function useMigration(userId: string | null): MigrationResult {
         return;
       }
 
+      // Ne jamais écraser une donnée cloud existante avec une valeur locale
+      // possiblement stale. Cette migration sert à remplir les clés absentes,
+      // pas à résoudre des conflits local/cloud.
+      const { data: existingRows, error: existingError } = await supabase
+        .from("user_data")
+        .select("data_key")
+        .eq("user_id", userId)
+        .in("data_key", rows.map((row) => row.data_key));
+
+      if (existingError) {
+        if (!cancelled) {
+          setResult({
+            status: "error",
+            migratedKeys,
+            skippedKeys,
+            error: `Erreur Supabase pendant la vérification cloud : ${existingError.message}`,
+          });
+        }
+        return;
+      }
+
+      const existingKeys = new Set(
+        (existingRows ?? [])
+          .map((row) => (row as { data_key?: unknown }).data_key)
+          .filter((key): key is string => typeof key === "string"),
+      );
+
+      const rowsToMigrate = rows.filter((row) => !existingKeys.has(row.data_key));
+      existingKeys.forEach((key) => skippedKeys.push(key));
+
+      if (rowsToMigrate.length === 0) {
+        localStorage.setItem(MIGRATION_DONE_KEY, "1");
+        if (!cancelled) {
+          setResult({ status: "done", migratedKeys: [], skippedKeys });
+        }
+        return;
+      }
+
       // Upsert par lots de 50 pour rester sous les limites Supabase
       const BATCH = 50;
-      for (let i = 0; i < rows.length; i += BATCH) {
-        const batch = rows.slice(i, i + BATCH);
+      for (let i = 0; i < rowsToMigrate.length; i += BATCH) {
+        const batch = rowsToMigrate.slice(i, i + BATCH);
         const { error } = await supabase
           .from("user_data")
           .upsert(batch, { onConflict: "user_id,data_key" });

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import { AppProviders } from "./providers";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { DEFAULT_THEME, THEME_BOOTSTRAP_SCRIPT } from "@/shared/lib/theme";
 
@@ -34,9 +33,7 @@ export default function RootLayout({
             </head>
             <body className={`${plusJakartaSans.variable} ${dmMono.variable} font-sans antialiased`}>
                 <ThemeProvider>
-                    <AppProviders>
-                        {children}
-                    </AppProviders>
+                    {children}
                 </ThemeProvider>
             </body>
         </html>
